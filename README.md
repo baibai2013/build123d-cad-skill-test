@@ -280,7 +280,66 @@ cd tests/02-spur-gear && python gear_test.py
 
 ---
 
-### 七、验证工具（Verification）
+### 七、运动仿真（Simulation）
+
+#### 25-fk-leg-chain — FK 正运动学（DH 齐次变换 + OCP 可视化）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| DH 参数定义三连杆 | :x: | d1=55mm, L1=100mm, L2=100mm |
+| 齐次变换矩阵链 FK 计算 | :x: | numpy 4×4 矩阵 T01×T12×T23 |
+| build123d Location 验证 | :x: | Pos*Rot 链结果与 numpy 一致 |
+| OCP 可视化（关节球+骨骼线） | :x: | show() 多对象多颜色预览 |
+
+**涉及 API**：`Sphere`, `Box`, `Pos`, `Rot`, `Location`, `show`, `export_step`, numpy `dh_matrix`
+
+#### 26-ik-single-leg — IK 逆运动学（解析求解 + 双构型对比）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 三连杆解析 IK（余弦定理） | :x: | 输入足端 (x,y,z) → 求 θ1,θ2,θ3 |
+| 双构型对比（knee_sign ±1） | :x: | 膝正弯/反弯两种姿态 |
+| FK→IK→FK 往返验证 | :x: | 误差 < 0.01mm |
+| OCP 双姿态并排显示 | :x: | 两种构型偏移 150mm 对比 |
+
+**涉及 API**：`Sphere`, `Box`, `Pos`, `show`, `export_step`, 纯 Python `ik_leg`
+
+#### 27-workspace-cloud — 工作空间点云（FK 遍历 + 可达性可视化）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 角度网格遍历 FK | :x: | 三轴各 15 步 → 3375 个足端点 |
+| 点云下采样显示 | :x: | 随机采样 500 点避免 OCP 卡顿 |
+| 肩关节标记 + 默认站姿 | :x: | 参考点 + 当前姿态对比 |
+
+**涉及 API**：`Vertex`, `Sphere`, `Pos`, `show`, numpy FK 遍历
+
+#### 28-gait-generator — 步态生成器（贝塞尔轨迹 + IK + OCP 动画）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 11 点贝塞尔摆动相轨迹 | :x: | MIT 标准 swing 曲线 |
+| trot 对角步态相位表 | :x: | LF+RR 同相，RF+LR 同相 |
+| IK 求解关节角度序列 | :x: | 步态→足端→IK→关节角度 |
+| OCP Animation 四足动画 | :x: | 4s 循环，20fps 关键帧 |
+
+**涉及 API**：`Box`, `Cylinder`, `Pos`, `Compound`, `Animation`, `add_track`, `animate`, `show`
+
+#### 29-urdf-export — URDF 导出（build123d → URDF + STL）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| build123d 零件构建 + label | :x: | body + upper_leg + lower_leg + foot |
+| URDF XML 生成（link + joint） | :x: | revolute 关节 + limit 限位 |
+| STL mesh 自动导出 | :x: | 每个 link 一个 .stl 文件 |
+| 质量/惯性矩估算 | :x: | volume × density → inertial 标签 |
+| yourdfpy 可选验证 | :x: | 加载 URDF 检查关节轴线 |
+
+**涉及 API**：`Box`, `Cylinder`, `Compound`, `export_stl`, `export_step`, `show`, xml.etree
+
+---
+
+### 八、验证工具（Verification）
 
 #### 23-validate-geometry — 几何验证
 
@@ -316,8 +375,9 @@ cd tests/02-spur-gear && python gear_test.py
 | 安装实战 | 0 | 3 | 3 |
 | OCP 可视化 | 0 | 4 | 4 |
 | 制造工艺 | 0 | 2 | 2 |
+| 运动仿真 | 0 | 5 | 5 |
 | 验证工具 | 0 | 2 | 2 |
-| **合计** | **2** | **22** | **24** |
+| **合计** | **2** | **27** | **29** |
 
 ---
 
@@ -357,7 +417,12 @@ build123d-cad-skill-test/
 │   ├── 21-print-tolerance/       # ⬜ 打印公差
 │   ├── 22-laser-dxf/             # ⬜ 激光 DXF
 │   ├── 23-validate-geometry/     # ⬜ 几何验证
-│   └── 24-export-formats/        # ⬜ 多格式导出
+│   ├── 24-export-formats/        # ⬜ 多格式导出
+│   ├── 25-fk-leg-chain/         # ⬜ FK 正运动学
+│   ├── 26-ik-single-leg/        # ⬜ IK 逆运动学
+│   ├── 27-workspace-cloud/      # ⬜ 工作空间点云
+│   ├── 28-gait-generator/       # ⬜ 步态生成器
+│   └── 29-urdf-export/          # ⬜ URDF 导出
 └── .claude/
     └── settings.local.json
 ```
