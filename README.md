@@ -23,7 +23,9 @@ cd tests/02-spur-gear && python gear_test.py
 
 ## 测试清单
 
-### 01-enclosure-box — 外壳盒（抽壳 + 扣合盖 + 文字 + 装配 + 爆炸动画）
+### 一、零件建模（Parts）
+
+#### 01-enclosure-box — 外壳盒（抽壳 + 扣合盖 + 文字 + 装配 + 爆炸动画）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -38,7 +40,7 @@ cd tests/02-spur-gear && python gear_test.py
 
 **涉及 API**：`Box`, `fillet`, `offset`(抽壳), `Rectangle`, `extrude`, `Text`, `Pos`, `Compound`, `export_step`, `export_stl`, `Animation`, `save_screenshot`
 
-### 02-spur-gear — 直齿圆柱齿轮（渐开线 + 逐齿融合）
+#### 02-spur-gear — 直齿圆柱齿轮（渐开线 + 逐齿融合）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -49,6 +51,274 @@ cd tests/02-spur-gear && python gear_test.py
 
 **涉及 API**：`Cylinder`, `Wire.make_polygon`, `BRepBuilderAPI_MakeFace`, `BuildPart`, `BuildSketch`, `add`, `extrude`, `Box`, Algebra Mode (`+`, `-`), `export_step`
 
+#### 03-mounting-plate — 安装板（基础入门）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| Box + GridLocations 孔阵列 | :x: | 100×80×10mm，四角 M5 通孔 |
+| fillet 顶面圆角 | :x: | 顶面边 R3 圆角 |
+| 选择器定位（sort_by 顶面） | :x: | `faces().sort_by(Axis.Z)[-1]` 取顶面 |
+| 参数化验证 | :x: | 修改 margin 参数后孔位跟随 |
+
+**涉及 API**：`Box`, `GridLocations`, `Hole`, `fillet`, `sort_by`, `export_step`
+
+#### 04-flange — 法兰盘（旋转体 + 极坐标阵列）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| Cylinder + 中心孔 | :x: | 外径 80mm，高 8mm，中心孔 R15 |
+| PolarLocations 螺栓孔阵列 | :x: | PCD 60mm，6 孔均布 |
+| CounterBoreHole 沉头孔 | :x: | 沉头半径、沉头深度参数化 |
+
+**涉及 API**：`Cylinder`, `Hole`, `PolarLocations`, `CounterBoreHole`, `export_step`
+
+#### 05-stepped-shaft — 阶梯轴（旋转体 + 键槽切割）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| BuildSketch(Plane.XZ) + revolve | :x: | 多段阶梯轮廓旋转体 |
+| 键槽切割（Mode.SUBTRACT extrude） | :x: | 顶面定位草图减材料 |
+| chamfer 端面倒角 | :x: | 两端 0.5mm 倒角 |
+
+**涉及 API**：`BuildSketch`, `Plane.XZ`, `Polyline`, `Line`, `make_face`, `revolve`, `chamfer`, `export_step`
+
+#### 06-pipe-elbow — 弯管接头（Sweep 路径扫掠）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| Edge.make_circle 弧线路径 | :x: | 弯曲半径 40mm，90° 弯管 |
+| 空心截面 sweep | :x: | 外径 R15，壁厚 2mm |
+| 路径起点 Plane 构造 | :x: | `Plane(path @ 0, z_dir=path % 0)` |
+
+**涉及 API**：`Edge.make_circle`, `sweep`, `Circle`, `Mode.SUBTRACT`, `Plane`, `export_step`
+
+#### 07-heat-sink — 散热片（GridLocations 鳍片）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| Box 底板 + 顶面定位 | :x: | 80×60×5mm 底板 |
+| GridLocations 鳍片阵列 | :x: | 8 片鳍片，高 25mm，厚 1.5mm |
+| 选择器取顶面作草图平面 | :x: | `sort_by(Axis.Z)[-1]` |
+
+**涉及 API**：`Box`, `GridLocations`, `Rectangle`, `extrude`, `sort_by`, `export_step`
+
+---
+
+### 二、曲面建模（Surface）
+
+#### 08-loft-transition — 多截面放样过渡
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 多平面 BuildSketch + loft | :x: | 圆 → 方 → 圆 三截面放样 |
+| Plane.XY.offset 多高度截面 | :x: | 三个不同高度的截面 |
+| 曲面连续性检查 | :x: | G1 切线连续验证 |
+
+**涉及 API**：`BuildSketch`, `Circle`, `Rectangle`, `loft`, `Plane.XY.offset`, `export_step`
+
+#### 09-organic-shell — 有机曲面外壳
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 多截面 Loft（5 个椭圆截面） | :x: | 变截面流线型壳体 |
+| shell 抽壳 | :x: | 均匀壁厚抽壳 |
+| Ellipse 参数化截面 | :x: | 长短轴随高度变化 |
+
+**涉及 API**：`Ellipse`, `loft`, `shell`, `Plane.XY.offset`, `export_step`
+
+#### 10-sweep-twist — 扭转扫掠
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 直线路径 + 截面扭转 | :x: | 方截面扭转 90° |
+| sweep transition 参数 | :x: | `sweep(path, transition=Transition.ROUND)` |
+
+**涉及 API**：`sweep`, `Line`, `Rectangle`, `Transition`, `export_step`
+
+---
+
+### 三、关节装配（Joints）
+
+#### 11-revolute-hinge — 旋转铰链
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| RigidJoint 固定连接 | :x: | 底座固定点 |
+| RevoluteJoint 旋转铰链 | :x: | 1 DOF，angular_range=(0,120) |
+| connect_to 自动定位 | :x: | RigidJoint.connect_to(RevoluteJoint) |
+| 关节可视化 | :x: | `show(..., render_joints=True)` |
+
+**涉及 API**：`RigidJoint`, `RevoluteJoint`, `connect_to`, `Compound`, `show(render_joints=True)`, `export_step`
+
+#### 12-quadruped-leg — 四足腿链（多关节串联）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| RevoluteJoint 串联链 | :x: | hip → knee → ankle → foot 四级 |
+| angular_range 限位 | :x: | hip(±45°), knee(-90°~0°), ankle(±30°) |
+| 多关节角度设置 | :x: | 各关节设定到指定角度 |
+| 关节链运动验证 | :x: | 改变 hip 角度后下级跟随 |
+
+**涉及 API**：`RevoluteJoint`, `RigidJoint`, `connect_to`, `Compound`, `label`, `export_step`
+
+#### 13-ball-joint — 球铰万向节
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| BallJoint 3 DOF 连接 | :x: | 球铰 angular_range 三轴 |
+| RigidJoint + BallJoint 对接 | :x: | 底座固定 + 头部万向 |
+
+**涉及 API**：`BallJoint`, `RigidJoint`, `connect_to`, `export_step`
+
+---
+
+### 四、安装实战（Mounting）
+
+#### 14-servo-mount — SG90 舵机安装座
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 舵机腔体（Box 减材料） | :x: | SG90 尺寸 23.2×12.5×22mm |
+| 耳片安装槽 | :x: | 舵机固定耳卡槽 |
+| 输出轴孔 + 线缆出口 | :x: | 顶面轴孔 + 侧面线缆口 |
+| 螺丝孔 | :x: | M2 安装孔 |
+
+**涉及 API**：`Box`, `Hole`, `extrude(Mode.SUBTRACT)`, `fillet`, `export_step`
+
+#### 15-pcb-enclosure — PCB 壳体（铜柱 + USB 开口 + 卡扣盖）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| Box + shell 抽壳 | :x: | PCB 尺寸反推壳体内腔 |
+| M2.5 铜柱（GridLocations） | :x: | 4 角铜柱对齐 PCB 安装孔 |
+| USB-C 接口开口 | :x: | 侧面减材料，定位到 PCB 高度 |
+| 散热通风槽 | :x: | 底面/侧面条形开口 |
+| 卡扣盖板 | :x: | snap-fit 卡扣 + 装配预览 |
+
+**涉及 API**：`Box`, `shell`, `GridLocations`, `Cylinder`, `Rectangle`, `extrude(Mode.SUBTRACT)`, `Pos`, `Compound`, `export_step`
+
+#### 16-sensor-bracket — 传感器支架（HC-SR04）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| L 型支架底板 | :x: | 带安装孔的底板 |
+| 双圆形传感器窗口 | :x: | HC-SR04 两探头中心距 26mm |
+| 角度调节槽 | :x: | 长圆孔允许俯仰调节 |
+
+**涉及 API**：`Box`, `Hole`, `Locations`, `SlotOverall`, `fillet`, `export_step`
+
+---
+
+### 五、OCP 可视化（Viewer）
+
+#### 17-show-params — show() 参数验证
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 多对象多颜色 show | :x: | `show(a, b, colors=["steelblue","orange"])` |
+| names 命名 | :x: | `names=["body","lid"]` → OCP 树状结构 |
+| transparent 半透明 | :x: | `alphas=[0.5, 1.0]` 半透明检查 |
+| reset_camera / Camera 枚举 | :x: | `Camera.FRONT`, `Camera.ISO` |
+
+**涉及 API**：`show`, `Camera`, `colors`, `names`, `alphas`
+
+#### 18-animation-explode — 爆炸动画（Animation API）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| Animation + add_track 平移 | :x: | `add_track("/Group/name", "t", ...)` |
+| 16s 循环时间轴 | :x: | 炸2s → 停10s → 合2s → 停2s |
+| animate(speed) 播放 | :x: | speed=1 正常速度 |
+| save_as_gif 导出 | :x: | fps=20，循环 GIF |
+
+**涉及 API**：`Animation`, `add_track`, `animate`, `save_as_gif`
+
+#### 19-animation-joint — 多关节运动动画
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| RevoluteJoint 角度 → rz 轨道 | :x: | 关节旋转映射到 OCP 动画 |
+| 多轨道协调 | :x: | 四腿交替步态编排 |
+| 时间轴错开 | :x: | 各关节不同相位 |
+
+**涉及 API**：`Animation`, `add_track("rz")`, `RevoluteJoint`, `show`
+
+#### 20-studio-material — PBR 材质渲染
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| StudioEnvironment 预设 | :x: | `show(..., preset="default")` |
+| 金属 / 塑料材质 | :x: | PBR 材质赋予不同零件 |
+| 截图对比 | :x: | `save_screenshot` 高质量渲染 |
+
+**涉及 API**：`show`, `StudioEnvironment`, `save_screenshot`
+
+---
+
+### 六、制造工艺验证（Process）
+
+#### 21-print-tolerance — 3D 打印公差测试件
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 间隙配合测试（0.1~0.5mm 梯度） | :x: | 公母件配合，5 档间隙 |
+| 最小壁厚验证 | :x: | 0.4 / 0.6 / 0.8 / 1.0mm 壁 |
+| 悬臂角度测试 | :x: | 30° / 45° / 60° 悬臂 |
+| STL 导出参数对比 | :x: | draft / standard / fine 三档精度 |
+
+**涉及 API**：`Box`, `Cylinder`, `shell`, `export_stl`, `linear_tolerance`, `angular_tolerance`
+
+#### 22-laser-dxf — 激光切割 DXF 导出
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 2D 轮廓构建 | :x: | 安装板 + 内孔 + 减重槽 |
+| export_dxf 导出 | :x: | 2D DXF 文件 |
+| 切缝补偿（offset 轮廓） | :x: | 外扩/内缩 0.1mm |
+
+**涉及 API**：`BuildSketch`, `Rectangle`, `Circle`, `offset`, `export_dxf`
+
+---
+
+### 七、验证工具（Verification）
+
+#### 23-validate-geometry — 几何验证
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| is_valid() BRep 有效性 | :x: | 多个零件的 BRep 检查 |
+| volume > 0 断言 | :x: | 体积正值验证 |
+| bounding_box 尺寸断言 | :x: | 包围盒与设计值对比 |
+| do_children_intersect 碰撞 | :x: | 装配体碰撞检测 |
+
+**涉及 API**：`is_valid`, `volume`, `bounding_box`, `Compound`, `do_children_intersect`
+
+#### 24-export-formats — 多格式导出
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| STEP 导出 + 回读验证 | :x: | export_step → import_step → 体积对比 |
+| STL 导出 + 文件大小合理性 | :x: | 不同精度档位 |
+| BREP 导出 + 回读验证 | :x: | export_brep → import_brep 无损 |
+| DXF 导出 | :x: | 2D 草图导出 |
+
+**涉及 API**：`export_step`, `export_stl`, `export_brep`, `export_dxf`, `import_step`, `import_brep`
+
+---
+
+## 覆盖统计
+
+| 类别 | 已完成 | 待开发 | 总计 |
+|------|--------|--------|------|
+| 零件建模 | 2 | 5 | 7 |
+| 曲面建模 | 0 | 3 | 3 |
+| 关节装配 | 0 | 3 | 3 |
+| 安装实战 | 0 | 3 | 3 |
+| OCP 可视化 | 0 | 4 | 4 |
+| 制造工艺 | 0 | 2 | 2 |
+| 验证工具 | 0 | 2 | 2 |
+| **合计** | **2** | **22** | **24** |
+
 ---
 
 ## 目录结构
@@ -57,13 +327,37 @@ cd tests/02-spur-gear && python gear_test.py
 build123d-cad-skill-test/
 ├── README.md
 ├── .gitignore
+├── .vscode/
+│   └── settings.json             # Pylance 类型检查配置
 ├── tests/
-│   ├── 01-enclosure-box/
+│   ├── 01-enclosure-box/         # ✅ 外壳盒
 │   │   ├── enclosure_box.py
-│   │   └── output/           # STEP, STL, GIF 导出产物
-│   └── 02-spur-gear/
-│       ├── gear_test.py
-│       └── output/           # STEP 导出产物
+│   │   └── output/
+│   ├── 02-spur-gear/             # ✅ 直齿轮
+│   │   ├── gear_test.py
+│   │   └── output/
+│   ├── 03-mounting-plate/        # ⬜ 安装板
+│   ├── 04-flange/                # ⬜ 法兰盘
+│   ├── 05-stepped-shaft/         # ⬜ 阶梯轴
+│   ├── 06-pipe-elbow/            # ⬜ 弯管接头
+│   ├── 07-heat-sink/             # ⬜ 散热片
+│   ├── 08-loft-transition/       # ⬜ 多截面放样
+│   ├── 09-organic-shell/         # ⬜ 有机曲面
+│   ├── 10-sweep-twist/           # ⬜ 扭转扫掠
+│   ├── 11-revolute-hinge/        # ⬜ 旋转铰链
+│   ├── 12-quadruped-leg/         # ⬜ 四足腿链
+│   ├── 13-ball-joint/            # ⬜ 球铰万向
+│   ├── 14-servo-mount/           # ⬜ 舵机座
+│   ├── 15-pcb-enclosure/         # ⬜ PCB 壳体
+│   ├── 16-sensor-bracket/        # ⬜ 传感器支架
+│   ├── 17-show-params/           # ⬜ show() 参数
+│   ├── 18-animation-explode/     # ⬜ 爆炸动画
+│   ├── 19-animation-joint/       # ⬜ 关节动画
+│   ├── 20-studio-material/       # ⬜ PBR 材质
+│   ├── 21-print-tolerance/       # ⬜ 打印公差
+│   ├── 22-laser-dxf/             # ⬜ 激光 DXF
+│   ├── 23-validate-geometry/     # ⬜ 几何验证
+│   └── 24-export-formats/        # ⬜ 多格式导出
 └── .claude/
     └── settings.local.json
 ```

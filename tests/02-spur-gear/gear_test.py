@@ -2,9 +2,9 @@
 直齿圆柱齿轮 / Spur Gear
 建模策略：根圆柱 + 逐齿 Algebra Mode 融合
 """
-from build123d import *
-from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeFace
-from OCP.gp import gp_Pln, gp_Pnt, gp_Dir
+from build123d import *  # noqa: F403
+from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeFace  # type: ignore[import-untyped]
+from OCP.gp import gp_Pln, gp_Pnt, gp_Dir  # type: ignore[import-untyped]
 import math
 
 # ===== 参数 =====
