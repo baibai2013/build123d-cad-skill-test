@@ -1,0 +1,21 @@
+# build123d output files
+**/output/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# mypy
+.mypy_cache/
+
+# IDE
+.vscode/
+*.code-workspace
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Claude Code local settings
+.claude/settings.local.json
