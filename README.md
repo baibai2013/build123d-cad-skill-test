@@ -66,9 +66,9 @@ cd tests/02-spur-gear && python gear_test.py
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| Cylinder + 中心孔 | :x: | 外径 80mm，高 8mm，中心孔 R15 |
-| PolarLocations 螺栓孔阵列 | :x: | PCD 60mm，6 孔均布 |
-| CounterBoreHole 沉头孔 | :x: | 沉头半径、沉头深度参数化 |
+| Cylinder + 中心孔 | :white_check_mark: | 外径 80mm，高 8mm，中心孔 R15 |
+| PolarLocations 螺栓孔阵列 | :white_check_mark: | PCD 60mm，6 孔均布 |
+| CounterBoreHole 沉头孔 | :white_check_mark: | 沉头半径、沉头深度参数化 |
 
 **涉及 API**：`Cylinder`, `Hole`, `PolarLocations`, `CounterBoreHole`, `export_step`
 
@@ -369,7 +369,7 @@ cd tests/02-spur-gear && python gear_test.py
 
 | 类别 | 已完成 | 待开发 | 总计 |
 |------|--------|--------|------|
-| 零件建模 | 3 | 4 | 7 |
+| 零件建模 | 4 | 3 | 7 |
 | 曲面建模 | 0 | 3 | 3 |
 | 关节装配 | 0 | 3 | 3 |
 | 安装实战 | 0 | 3 | 3 |
@@ -377,7 +377,7 @@ cd tests/02-spur-gear && python gear_test.py
 | 制造工艺 | 0 | 2 | 2 |
 | 运动仿真 | 0 | 5 | 5 |
 | 验证工具 | 0 | 2 | 2 |
-| **合计** | **3** | **26** | **29** |
+| **合计** | **4** | **25** | **29** |
 
 ---
 
