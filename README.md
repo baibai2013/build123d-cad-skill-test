@@ -145,10 +145,10 @@ cd tests/02-spur-gear && python gear_test.py
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| RigidJoint 固定连接 | :x: | 底座固定点 |
-| RevoluteJoint 旋转铰链 | :x: | 1 DOF，angular_range=(0,120) |
-| connect_to 自动定位 | :x: | RigidJoint.connect_to(RevoluteJoint) |
-| 关节可视化 | :x: | `show(..., render_joints=True)` |
+| RigidJoint 固定连接 | :white_check_mark: | 底座右端顶面固定点 |
+| RevoluteJoint 旋转铰链 | :white_check_mark: | 1 DOF，angular_range=(0,120)，臂旋转 60° |
+| connect_to 自动定位 | :white_check_mark: | **j_base.connect_to(j_arm)** ← 注意方向：RigidJoint 调用才能移动 arm |
+| 关节可视化 | :white_check_mark: | `show(..., render_joints=True)` |
 
 **涉及 API**：`RigidJoint`, `RevoluteJoint`, `connect_to`, `Compound`, `show(render_joints=True)`, `export_step`
 
@@ -373,13 +373,13 @@ cd tests/02-spur-gear && python gear_test.py
 |------|--------|--------|------|
 | 零件建模 | 7 | 0 | 7 |
 | 曲面建模 | 3 | 0 | 3 |
-| 关节装配 | 0 | 3 | 3 |
+| 关节装配 | 1 | 2 | 3 |
 | 安装实战 | 0 | 3 | 3 |
 | OCP 可视化 | 0 | 4 | 4 |
 | 制造工艺 | 0 | 2 | 2 |
 | 运动仿真 | 0 | 5 | 5 |
 | 验证工具 | 0 | 2 | 2 |
-| **合计** | **10** | **19** | **29** |
+| **合计** | **11** | **18** | **29** |
 
 ---
 
@@ -406,7 +406,7 @@ build123d-cad-skill-test/
 │   ├── 08-loft-transition/       # ✅ 多截面放样
 │   ├── 09-organic-shell/         # ✅ 有机曲面
 │   ├── 10-sweep-twist/           # ✅ 扭转扫掠
-│   ├── 11-revolute-hinge/        # ⬜ 旋转铰链
+│   ├── 11-revolute-hinge/        # ✅ 旋转铰链
 │   ├── 12-quadruped-leg/         # ⬜ 四足腿链
 │   ├── 13-ball-joint/            # ⬜ 球铰万向
 │   ├── 14-servo-mount/           # ⬜ 舵机座
