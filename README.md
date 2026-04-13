@@ -86,9 +86,9 @@ cd tests/02-spur-gear && python gear_test.py
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| Edge.make_circle 弧线路径 | :x: | 弯曲半径 40mm，90° 弯管 |
-| 空心截面 sweep | :x: | 外径 R15，壁厚 2mm |
-| 路径起点 Plane 构造 | :x: | `Plane(path @ 0, z_dir=path % 0)` |
+| Edge.make_circle 弧线路径 | :white_check_mark: | 弯曲半径 40mm，90° 弯管 |
+| 空心截面 sweep | :white_check_mark: | 外径 R15，壁厚 2mm |
+| 路径起点 Plane 构造 | :white_check_mark: | `Plane(path @ 0, z_dir=path % 0)` |
 
 **涉及 API**：`Edge.make_circle`, `sweep`, `Circle`, `Mode.SUBTRACT`, `Plane`, `export_step`
 
@@ -369,7 +369,7 @@ cd tests/02-spur-gear && python gear_test.py
 
 | 类别 | 已完成 | 待开发 | 总计 |
 |------|--------|--------|------|
-| 零件建模 | 5 | 2 | 7 |
+| 零件建模 | 6 | 1 | 7 |
 | 曲面建模 | 0 | 3 | 3 |
 | 关节装配 | 0 | 3 | 3 |
 | 安装实战 | 0 | 3 | 3 |
@@ -377,7 +377,7 @@ cd tests/02-spur-gear && python gear_test.py
 | 制造工艺 | 0 | 2 | 2 |
 | 运动仿真 | 0 | 5 | 5 |
 | 验证工具 | 0 | 2 | 2 |
-| **合计** | **5** | **24** | **29** |
+| **合计** | **6** | **23** | **29** |
 
 ---
 
