@@ -131,10 +131,11 @@ cd tests/02-spur-gear && python gear_test.py
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| 直线路径 + 截面扭转 | :x: | 方截面扭转 90° |
-| sweep transition 参数 | :x: | `sweep(path, transition=Transition.ROUND)` |
+| 直线路径 + 截面扭转 | :white_check_mark: | 矩形截面（20×10mm）扭转 90°，体积 13000 mm³ |
+| sweep multisection 双截面 | :white_check_mark: | 首尾两截面方向不同，线性插值过渡 |
+| Transition.ROUND 参数 | :white_check_mark: | `sweep(path, multisection=True, transition=Transition.ROUND)` |
 
-**涉及 API**：`sweep`, `Line`, `Rectangle`, `Transition`, `export_step`
+**涉及 API**：`sweep`, `Edge.make_line`, `Plane(origin, x_dir, z_dir)`, `Transition`, `Rectangle`, `export_step`
 
 ---
 
@@ -371,14 +372,14 @@ cd tests/02-spur-gear && python gear_test.py
 | 类别 | 已完成 | 待开发 | 总计 |
 |------|--------|--------|------|
 | 零件建模 | 7 | 0 | 7 |
-| 曲面建模 | 2 | 1 | 3 |
+| 曲面建模 | 3 | 0 | 3 |
 | 关节装配 | 0 | 3 | 3 |
 | 安装实战 | 0 | 3 | 3 |
 | OCP 可视化 | 0 | 4 | 4 |
 | 制造工艺 | 0 | 2 | 2 |
 | 运动仿真 | 0 | 5 | 5 |
 | 验证工具 | 0 | 2 | 2 |
-| **合计** | **9** | **20** | **29** |
+| **合计** | **10** | **19** | **29** |
 
 ---
 
@@ -404,7 +405,7 @@ build123d-cad-skill-test/
 │   ├── 07-heat-sink/             # ✅ 散热片
 │   ├── 08-loft-transition/       # ✅ 多截面放样
 │   ├── 09-organic-shell/         # ✅ 有机曲面
-│   ├── 10-sweep-twist/           # ⬜ 扭转扫掠
+│   ├── 10-sweep-twist/           # ✅ 扭转扫掠
 │   ├── 11-revolute-hinge/        # ⬜ 旋转铰链
 │   ├── 12-quadruped-leg/         # ⬜ 四足腿链
 │   ├── 13-ball-joint/            # ⬜ 球铰万向
