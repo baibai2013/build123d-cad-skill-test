@@ -11,7 +11,7 @@ Design intent (Dave Cowden style) / 设计意图:
 """
 
 from build123d import *
-import os, math
+import os, math as _math
 
 # ===== Parameters / 参数 =====
 # Shaft segments (from one end to other) / 轴段（从一端到另一端）
@@ -37,6 +37,8 @@ z_main_center = z_main_start + main_body_len / 2                   # 0 mm (symme
 key_width  = 6                        # keyway width mm / 键槽宽度 mm
 key_depth  = 3                        # keyway depth mm / 键槽深度 mm
 key_length = main_body_len * 0.75     # 75% of main body length / 主轴段长度的 75%  → 30 mm
+key_angle  = 0                        # keyway angular position, degrees around shaft Z axis
+                                      # 键槽角度，绕轴 Z 轴旋转（0=顶面 +Y, 90=右侧 +X, 180=底面 -Y）
 
 chamfer_len = 0.5   # end chamfer length mm / 端面倒角长度 mm
 
@@ -62,17 +64,35 @@ with BuildPart() as shaft:
         make_face()
     revolve(axis=Axis.Z)
 
-    # Step 2: axial keyway — sketch on Plane.XZ offset to top of shaft (+Y = main_r)
-    # 步骤2：轴向键槽 —— 在 Plane.XZ 偏移到轴顶面（+Y = main_r）处建草图
+    # Step 2: axial keyway at key_angle around shaft Z axis
+    # 步骤2：绕轴 Z 轴旋转 key_angle 角度的轴向键槽
     #
-    # Plane.XZ normal is Y; offset(main_r) places sketch at Y = +main_r (shaft top surface)
-    # Plane.XZ 法向为 Y；offset(main_r) 将草图放在 Y = +main_r（轴顶面）
-    # Rectangle local axes: X → global X (width/tangential), Y → global Z (length/axial)
-    # Rectangle 本地轴：X → 全局 X（宽度/切向），Y → 全局 Z（长度/轴向）
-    with BuildSketch(Plane.XZ.offset(main_r)):
-        with Locations((0, z_main_center)):   # center keyway on main body / 键槽对中到主轴段
+    # Plane is built analytically so key_angle drives the cut position:
+    #   origin  = (r·sin θ, r·cos θ, 0)   — point on shaft surface at angle θ
+    #   x_dir   = (cos θ, −sin θ, 0)       — tangential direction (keyway width)
+    #   z_dir   = (0, 0, 1)                — axial direction (keyway length)
+    #   extrude = −key_depth (inward along plane normal / 沿法向向内切)
+    # 平面解析构造，key_angle 驱动键槽方位：
+    #   原点 = 轴表面对应角度处，X 方向 = 切向（槽宽），Z 方向 = 轴向（槽长）
+    # Plane geometry derived from Plane.XZ.offset(r) at θ=0:
+    #   origin = (r·sin θ, −r·cos θ, 0)   — shaft surface at angle θ
+    #   x_dir  = (cos θ,   sin θ,    0)   — tangential (keyway width direction)
+    #   z_dir  = (sin θ,  −cos θ,    0)   — outward normal (= z_dir of Plane at θ=0)
+    #   y_dir  = (0, 0, −1) [implied]     — axial but flipped; Rectangle height goes in −Z
+    # extrude(−depth) cuts in the inward radial direction / extrude(-depth) 沿径向向内切
+    #
+    # 平面几何由 Plane.XZ.offset(r) 在 θ=0 时推导：
+    #   origin = (r·sin θ, −r·cos θ, 0)  法向 = 径向外向，extrude(-depth) 沿径向向内
+    _a = _math.radians(key_angle)
+    keyway_plane = Plane(
+        origin = Vector( main_r * _math.sin(_a), -main_r * _math.cos(_a), 0),
+        x_dir  = Vector( _math.cos(_a),           _math.sin(_a),           0),
+        z_dir  = Vector( _math.sin(_a),           -_math.cos(_a),          0),  # outward normal
+    )
+    with BuildSketch(keyway_plane):
+        with Locations((0, -z_main_center)):  # y_dir=-Z so negate; centers on main body / y_dir=-Z 取负，对中主轴段
             Rectangle(key_width, key_length)
-    extrude(amount=-key_depth, mode=Mode.SUBTRACT)   # cut inward in -Y / 沿 -Y 向内切
+    extrude(amount=-key_depth, mode=Mode.SUBTRACT)   # cut inward / 向内切入
 
     # Step 3: chamfer both end faces / 步骤3：两端倒角
     end_edges = shaft.edges().filter_by(GeomType.CIRCLE).sort_by(Axis.Z)
@@ -93,7 +113,7 @@ assert abs(bb.size.Z - total_length) < 1.0, \
 assert abs(bb.size.X - main_r * 2) < 1.0, \
     f"max diameter deviation / 最大径偏差: {bb.size.X:.2f} vs {main_r*2}"
 
-full_vol = math.pi * main_r**2 * total_length
+full_vol = _math.pi * main_r**2 * total_length
 assert 0 < vol < full_vol, f"volume out of range / 体积超范围: {vol:.2f}"
 assert len(shaft.part.solids()) == 1, "expected exactly one solid / 应只有一个 solid"
 
