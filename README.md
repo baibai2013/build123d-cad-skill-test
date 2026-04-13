@@ -111,9 +111,9 @@ cd tests/02-spur-gear && python gear_test.py
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| 多平面 BuildSketch + loft | :x: | 圆 → 方 → 圆 三截面放样 |
-| Plane.XY.offset 多高度截面 | :x: | 三个不同高度的截面 |
-| 曲面连续性检查 | :x: | G1 切线连续验证 |
+| 多平面 BuildSketch + loft | :white_check_mark: | 圆 → 方 → 圆 三截面放样 |
+| Plane.XY.offset 多高度截面 | :white_check_mark: | z=0/30/60 三个高度截面 |
+| 曲面连续性检查 | :white_check_mark: | G1 连续性体积验证（56301 mm³） |
 
 **涉及 API**：`BuildSketch`, `Circle`, `Rectangle`, `loft`, `Plane.XY.offset`, `export_step`
 
@@ -371,14 +371,14 @@ cd tests/02-spur-gear && python gear_test.py
 | 类别 | 已完成 | 待开发 | 总计 |
 |------|--------|--------|------|
 | 零件建模 | 7 | 0 | 7 |
-| 曲面建模 | 0 | 3 | 3 |
+| 曲面建模 | 1 | 2 | 3 |
 | 关节装配 | 0 | 3 | 3 |
 | 安装实战 | 0 | 3 | 3 |
 | OCP 可视化 | 0 | 4 | 4 |
 | 制造工艺 | 0 | 2 | 2 |
 | 运动仿真 | 0 | 5 | 5 |
 | 验证工具 | 0 | 2 | 2 |
-| **合计** | **7** | **22** | **29** |
+| **合计** | **8** | **21** | **29** |
 
 ---
 
@@ -402,7 +402,7 @@ build123d-cad-skill-test/
 │   ├── 05-stepped-shaft/         # ✅ 阶梯轴
 │   ├── 06-pipe-elbow/            # ✅ 弯管接头
 │   ├── 07-heat-sink/             # ✅ 散热片
-│   ├── 08-loft-transition/       # ⬜ 多截面放样
+│   ├── 08-loft-transition/       # ✅ 多截面放样
 │   ├── 09-organic-shell/         # ⬜ 有机曲面
 │   ├── 10-sweep-twist/           # ⬜ 扭转扫掠
 │   ├── 11-revolute-hinge/        # ⬜ 旋转铰链
