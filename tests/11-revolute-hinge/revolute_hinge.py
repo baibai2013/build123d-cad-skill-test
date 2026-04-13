@@ -187,17 +187,18 @@ try:
 
         # --- Final ISO screenshot / 最终 ISO 截图 ---
         j_thigh.connect_to(j_shin, angle=0)
-        assembly_final = Compound([thigh, shin], label="leg_joint")
-        show(assembly_final, names=["leg_joint"], render_joints=True, reset_camera=Camera.ISO)
+        # Show thigh and shin as separate named objects so OCP can address them individually
+        # 分开 show 大腿和小腿，使 OCP 能独立寻址做动画
+        show(thigh, shin, names=["thigh", "shin"], render_joints=True, reset_camera=Camera.ISO)
         time.sleep(0.5)
         save_screenshot(os.path.join(output_dir, "revolute_hinge_ISO.png"))
 
         # --- OCP Animation track / OCP Animation 轨道 ---
         try:
-            anim = Animation(assembly_final)
+            anim = Animation()
             # Flex/extend cycle: straight(0°) → bent(60°, 2s) → hold 1s → straight(0°, 4s) → hold 1s
             # 屈伸循环：直腿(0°) → 屈膝(60°,2s) → 保持1s → 直腿(0°,4s) → 保持1s
-            anim.add_track("/Group/leg_joint/shin", "ry",
+            anim.add_track("/Group/shin", "ry",
                            times =[0,   2,   3,   5,   6],
                            values=[0,  60,  60,   0,   0])
             anim.animate(speed=1)
