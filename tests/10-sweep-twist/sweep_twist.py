@@ -1,55 +1,52 @@
 """
 10-sweep-twist — Twist Sweep / 扭转扫掠
 Tests / 测试:
-  straight line path + section twist  — Rectangle section rotates 90° / 矩形截面扭转 90°
-  sweep multisection                   — two oriented sections along path / 两个方向不同的截面
-  Transition.ROUND                     — smooth corner transition / 圆滑过渡
+  helix path (quarter turn)   — 3D curved path with torsion / 有扭矩的三维螺旋路径
+  ribbon cross-section sweep  — thin rectangle follows Frenet frame / 薄矩形截面跟随 Frenet 框架
+  is_frenet=True              — natural twist from path curvature / 路径曲率驱动的自然扭转
 
 Design intent (Dave Cowden style) / 设计意图:
-  Straight vertical path (60mm), rectangular cross-section (20×10mm).
-  Start section: width along X. End section: same rect rotated 90° (width along Y).
-  sweep(multisection=True) interpolates between orientations → twisted prism.
-  直线路径（60mm），矩形截面（20×10mm）。
-  起始截面宽边朝 X，末端截面旋转 90° 后宽边朝 Y，放样扫掠得到扭转棱柱。
+  Helix path: radius=40mm, height=60mm, quarter turn (90°) — gently curving in 3D.
+  Cross-section: 30×5mm ribbon, placed perpendicular to path tangent at start.
+  sweep(is_frenet=True) lets OCC Frenet frame drive the section twist as path curves.
+  The ribbon naturally rolls/twists following the helix — organic twisted-band solid.
+  螺旋路径：半径40mm，高60mm，四分之一圈（90°）。
+  截面：30×5mm 薄矩形，垂直于起点切线放置。
+  is_frenet=True 让 OCC Frenet 框架随路径曲率自然扭转截面，得到有机扭转缎带实体。
 """
 
 from build123d import *
 import os, math
 
 # ===== Parameters / 参数 =====
-path_height = 60     # sweep path length mm (along Z) / 扫掠路径长度 mm（沿Z轴）
-section_w   = 20     # cross-section width mm / 截面宽度 mm
-section_h   = 10     # cross-section height mm / 截面高度 mm
-twist_deg   = 90     # total twist angle degrees / 总扭转角度
+helix_r    = 40     # helix radius mm / 螺旋半径 mm
+helix_h    = 60     # helix height mm (quarter turn) / 螺旋高度 mm（四分之一圈）
+helix_p    = helix_h / 0.25    # pitch mm/rev to get exactly 90° turn / 一圈节距，恰好走 90°
+
+section_w  = 30     # ribbon width mm / 缎带宽度 mm
+section_h  = 5      # ribbon thickness mm / 缎带厚度 mm
 
 output_dir = os.path.join(os.path.dirname(__file__), "output")
 os.makedirs(output_dir, exist_ok=True)
 step_path  = os.path.join(output_dir, "sweep_twist.step")
 
 # ===== Modeling / 建模 =====
-# Path: straight line along +Z axis / 路径：沿+Z轴的直线
-path = Edge.make_line((0, 0, 0), (0, 0, path_height))
+# Path: quarter-turn helix (90° arc lifted by helix_h) / 路径：四分之一圈螺旋线
+path = Edge.make_helix(pitch=helix_p, height=helix_h, radius=helix_r)
 
-# Rotated end plane: x_dir rotated twist_deg around Z / 末端平面：x_dir 绕Z轴旋转 twist_deg
-rad = math.radians(twist_deg)
-end_plane = Plane(
-    origin=(0, 0, path_height),
-    x_dir=(math.cos(rad), math.sin(rad), 0),   # 90°: (0, 1, 0)
-    z_dir=(0, 0, 1)                             # normal stays +Z / 法向保持+Z
-)
+# Start plane: origin at path start, normal = path tangent at t=0
+# 起始平面：原点在路径起点，法向 = 路径 t=0 处切线
+start_plane = Plane(origin=path @ 0, z_dir=path % 0)
 
 with BuildPart() as twisted:
 
-    # Section 1 at z=0: rectangle, width along +X / 截面1 z=0：矩形，宽边朝+X
-    with BuildSketch(Plane.XY):
+    # Cross-section: thin ribbon at path start / 截面：路径起点处的薄矩形缎带
+    with BuildSketch(start_plane):
         Rectangle(section_w, section_h)
 
-    # Section 2 at z=path_height: same rect, rotated twist_deg / 截面2 末端：同矩形旋转 twist_deg
-    with BuildSketch(end_plane):
-        Rectangle(section_w, section_h)
-
-    # Sweep: interpolate between sections along straight path / 扫掠：沿直线路径在截面间插值
-    sweep(path=path, multisection=True, transition=Transition.ROUND)
+    # Sweep along helix path; is_frenet=True rotates section with Frenet frame
+    # 沿螺旋路径扫掠；is_frenet=True 让截面跟随 Frenet 框架旋转
+    sweep(path=path, is_frenet=True)
 
 # ===== Validation Layer 1 + 2 / 验证 =====
 assert twisted.part is not None, "part is None / part 为空"
@@ -59,24 +56,16 @@ vol = twisted.part.volume
 bb  = twisted.part.bounding_box()
 print(f"Bounding box / 包围盒: {bb.size.X:.2f} x {bb.size.Y:.2f} x {bb.size.Z:.2f} mm")
 print(f"Volume / 体积: {vol:.2f} mm³")
+print(f"Path length / 路径长度: {path.length:.2f} mm")
 
-# Height check / 高度检查
-assert abs(bb.size.Z - path_height) < 1.0, \
-    f"height deviation / 高度偏差: {bb.size.Z:.2f} vs {path_height}"
+# Height: Z span should cover helix_h / 高度：Z 跨度应覆盖螺旋高度
+assert bb.size.Z >= helix_h * 0.9, \
+    f"Z span too small / Z 跨度过小: {bb.size.Z:.2f}"
 
-# XY span: at 45° mid-twist the section projects to ≈ (section_w+section_h)*sin45°
-# 中途 45° 时截面投影宽度约为 (section_w+section_h)*sin(45°) ≈ 21mm
-min_xy_span = section_h                            # at least the narrower side / 至少窄边
-max_xy_span = section_w + section_h               # loose upper bound / 宽松上界
-assert bb.size.X >= min_xy_span * 0.9, \
-    f"X span too small / X 跨度过小: {bb.size.X:.2f}"
-assert bb.size.X <= max_xy_span * 1.05, \
-    f"X span too large / X 跨度过大: {bb.size.X:.2f}"
-
-# Volume: constant cross-section area × height (twist doesn't change area)
-# 体积：截面面积（不随旋转变化）× 路径长度
-approx_vol = section_w * section_h * path_height  # 20*10*60 = 12000 mm³
-assert approx_vol * 0.90 < vol < approx_vol * 1.10, \
+# Volume: section_area × path_length (±20% tolerance for Frenet twist geometry)
+# 体积：截面面积 × 路径长度（Frenet 扭转几何允许 ±20% 宽容度）
+approx_vol = section_w * section_h * path.length
+assert approx_vol * 0.80 < vol < approx_vol * 1.20, \
     f"volume out of range / 体积超范围: {vol:.2f}, expected ~{approx_vol:.0f}"
 
 assert len(twisted.part.solids()) == 1, "expected exactly one solid / 应只有一个 solid"
