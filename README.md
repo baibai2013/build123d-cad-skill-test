@@ -76,9 +76,9 @@ cd tests/02-spur-gear && python gear_test.py
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| BuildSketch(Plane.XZ) + revolve | :x: | 多段阶梯轮廓旋转体 |
-| 键槽切割（Mode.SUBTRACT extrude） | :x: | 顶面定位草图减材料 |
-| chamfer 端面倒角 | :x: | 两端 0.5mm 倒角 |
+| BuildSketch(Plane.XZ) + revolve | :white_check_mark: | 多段阶梯轮廓旋转体 |
+| 键槽切割（Mode.SUBTRACT extrude） | :white_check_mark: | 顶面定位草图减材料 |
+| chamfer 端面倒角 | :white_check_mark: | 两端 0.5mm 倒角 |
 
 **涉及 API**：`BuildSketch`, `Plane.XZ`, `Polyline`, `Line`, `make_face`, `revolve`, `chamfer`, `export_step`
 
@@ -369,7 +369,7 @@ cd tests/02-spur-gear && python gear_test.py
 
 | 类别 | 已完成 | 待开发 | 总计 |
 |------|--------|--------|------|
-| 零件建模 | 4 | 3 | 7 |
+| 零件建模 | 5 | 2 | 7 |
 | 曲面建模 | 0 | 3 | 3 |
 | 关节装配 | 0 | 3 | 3 |
 | 安装实战 | 0 | 3 | 3 |
@@ -377,7 +377,7 @@ cd tests/02-spur-gear && python gear_test.py
 | 制造工艺 | 0 | 2 | 2 |
 | 运动仿真 | 0 | 5 | 5 |
 | 验证工具 | 0 | 2 | 2 |
-| **合计** | **4** | **25** | **29** |
+| **合计** | **5** | **24** | **29** |
 
 ---
 
