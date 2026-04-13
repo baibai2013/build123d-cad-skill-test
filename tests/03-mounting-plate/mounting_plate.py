@@ -70,11 +70,16 @@ assert abs(top_z - h / 2) < 0.01, f"顶面 Z 位置错误: {top_z:.3f} ≠ {h/2}
 hole_faces = plate.faces().filter_by(GeomType.CYLINDER)
 assert len(hole_faces) >= 4, f"孔数错误: 期望 >=4，实际 {len(hole_faces)}"
 
+# 实体数量：应为单一 solid（无多余残留体）
+solids = plate.part.solids()
+assert len(solids) == 1, f"实体数错误: 期望 1，实际 {len(solids)}"
+
 print(f"  ✓ 包围盒: {bb.size.X:.1f} × {bb.size.Y:.1f} × {bb.size.Z:.1f} mm")
 print(f"  ✓ 体积: {vol:.1f} mm³ (毛坯 {raw_vol} - 4孔)")
 print(f"  ✓ BRep 有效")
 print(f"  ✓ 顶面 Z={top_z:.3f} mm (期望 {h/2})")
 print(f"  ✓ 孔侧面数: {len(hole_faces)} (>=4)")
+print(f"  ✓ 单一 solid (无残留体)")
 
 # 参数化联动验证：margin 改变，孔间距自动跟随
 print("\n参数化联动验证：")
@@ -85,10 +90,22 @@ for m_test in [8, 12, 16]:
 
 print("\n所有断言通过 ✓")
 
-# ===== 导出 =====
+# ===== 导出 + Layer 3 STEP 回读验证（CADCodeVerify Layer 3 等价）=====
 os.makedirs("output", exist_ok=True)
-export_step(plate.part, "output/mounting_plate.step")
-print("\n导出完成: output/mounting_plate.step")
+step_path = "output/mounting_plate.step"
+export_step(plate.part, step_path)
+
+# 文件存在且有实质内容
+step_size = os.path.getsize(step_path)
+assert step_size > 1000, f"STEP 文件过小 ({step_size} bytes)，可能为空"
+
+# 回读验证：导出/导入体积偏差 < 0.1%（STEP 格式为精确 NURBS/BREP，无损）
+reimported = import_step(step_path)
+vol_diff = abs(reimported.volume - vol) / vol
+assert vol_diff < 0.001, f"STEP 导出/导入体积偏差过大: {vol_diff:.4%}"
+
+print(f"\n导出完成: {step_path} ({step_size:,} bytes)")
+print(f"  ✓ STEP 回读体积偏差: {vol_diff:.6%} (< 0.1%)")
 
 # ============================================================
 # OCP Viewer 多视角截图测试
