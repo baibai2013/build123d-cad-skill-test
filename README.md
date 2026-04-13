@@ -92,12 +92,12 @@ cd tests/02-spur-gear && python gear_test.py
 
 **涉及 API**：`Edge.make_circle`, `sweep`, `Circle`, `Mode.SUBTRACT`, `Plane`, `export_step`
 
-#### 07-heat-sink — 散热片（GridLocations 鳍片）
+#### 07-heat-sink — 针状散热片（Pin-Fin，GridLocations 针阵列）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| Box 底板 + 顶面定位 | :white_check_mark: | 80×60×5mm 底板 |
-| GridLocations 鳍片阵列 | :white_check_mark: | 8 片鳍片，高 25mm，厚 1.5mm |
+| Box 底板 + 顶面定位 | :white_check_mark: | 30×30×3mm 底板 |
+| GridLocations 针阵列 | :white_check_mark: | 6×6 方形针柱，高 8mm，截面 2×2mm，四面进风 |
 | 选择器取顶面作草图平面 | :white_check_mark: | `sort_by(Axis.Z)[-1]` |
 
 **涉及 API**：`Box`, `GridLocations`, `Rectangle`, `extrude`, `sort_by`, `export_step`

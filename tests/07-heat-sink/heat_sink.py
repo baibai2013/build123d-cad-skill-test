@@ -1,30 +1,33 @@
 """
-07-heat-sink — Heat Sink / 散热片
+07-heat-sink — Pin-Fin Heat Sink / 针状散热片
 Tests / 测试:
-  Box base + top face selector  — 80×60×5mm base plate / 底板顶面选择器
-  GridLocations fin array       — 8 fins, 25mm tall, 1.5mm thick / 8 片鳍片阵列
+  Box base + top face selector  — 30×30×3mm base plate / 底板顶面选择器
+  GridLocations pin array       — 6×6 square pins, 8mm tall, 2mm wide / 6×6 方形针阵列
   sort_by(Axis.Z) top face      — sketch plane from sorted face / 排序取顶面作草图平面
 
 Design intent (Dave Cowden style) / 设计意图:
-  Base plate -> select top face -> grid-locate fin sketches -> extrude fins upward
-  底板 -> 选顶面 -> 网格定位鳍片草图 -> 向上拉伸鳍片
+  Base plate -> select top face -> grid-locate square pin sketches -> extrude pins upward
+  Pin-fin style allows airflow from all four sides (vs plate fins: one direction only)
+  底板 -> 选顶面 -> 网格定位方形针草图 -> 向上拉伸针柱
+  针状散热片支持四面进风（平板式只能单向进风）
 """
 
 from build123d import *
 import os, math
 
 # ===== Parameters / 参数 =====
-base_l  = 80     # base plate length mm / 底板长度 mm
-base_w  = 60     # base plate width mm / 底板宽度 mm
-base_h  = 5      # base plate height mm / 底板高度 mm
+base_l  = 30     # base plate length mm / 底板长度 mm
+base_w  = 30     # base plate width mm / 底板宽度 mm
+base_h  = 3      # base plate height mm / 底板高度 mm
 
-fin_count  = 8        # number of fins / 鳍片数量
-fin_h      = 25       # fin height mm / 鳍片高度 mm
-fin_t      = 1.5      # fin thickness mm / 鳍片厚度 mm
-fin_len    = base_l - 10   # fin length mm (leave 5mm margin each end) / 鳍片长度（两端各留 5mm）
-# Fins are spaced evenly across the width / 鳍片在宽度方向均匀分布
-# GridLocations spacing: (fin_count-1) intervals across usable width / GridLocations 间距：可用宽度等分
-fin_y_spacing = (base_w - 10) / (fin_count - 1)  # 7.14mm spacing / 间距
+pin_nx  = 6      # pin count in X / X 方向针数
+pin_ny  = 6      # pin count in Y / Y 方向针数
+pin_h   = 8      # pin height mm / 针高度 mm
+pin_w   = 2      # pin width (square cross-section) mm / 针宽（正方形截面）mm
+margin  = 3      # edge margin mm / 边缘留量 mm
+# Spacing between pin centers / 针中心间距
+pin_x_spacing = (base_l - 2 * margin) / (pin_nx - 1)   # 4.8 mm
+pin_y_spacing = (base_w - 2 * margin) / (pin_ny - 1)   # 4.8 mm
 
 output_dir = os.path.join(os.path.dirname(__file__), "output")
 step_path  = os.path.join(output_dir, "heat_sink.step")
@@ -35,15 +38,15 @@ with BuildPart() as sink:
     # Step 1: base plate / 步骤1：底板
     Box(base_l, base_w, base_h)
 
-    # Step 2: select top face as fin sketch plane / 步骤2：选顶面作鳍片草图平面
+    # Step 2: select top face as pin sketch plane / 步骤2：选顶面作针草图平面
     top_face = sink.faces().sort_by(Axis.Z)[-1]
 
-    # Step 3: grid-locate fin sketches on top face, extrude upward
-    # 步骤3：在顶面网格定位鳍片草图，向上拉伸
+    # Step 3: grid-locate square pin sketches on top face, extrude upward
+    # 步骤3：在顶面网格定位方形针草图，向上拉伸针柱
     with BuildSketch(top_face):
-        with GridLocations(0, fin_y_spacing, 1, fin_count):
-            Rectangle(fin_len, fin_t)
-    extrude(amount=fin_h)
+        with GridLocations(pin_x_spacing, pin_y_spacing, pin_nx, pin_ny):
+            Rectangle(pin_w, pin_w)
+    extrude(amount=pin_h)
 
 # ===== Validation Layer 1 + 2 / 验证 =====
 assert sink.part is not None, "part is None / part 为空"
@@ -59,13 +62,13 @@ assert abs(bb.size.X - base_l) < 1.0, \
     f"length deviation / 长度偏差: {bb.size.X:.2f} vs {base_l}"
 assert abs(bb.size.Y - base_w) < 1.0, \
     f"width deviation / 宽度偏差: {bb.size.Y:.2f} vs {base_w}"
-assert abs(bb.size.Z - (base_h + fin_h)) < 1.0, \
-    f"total height deviation / 总高偏差: {bb.size.Z:.2f} vs {base_h + fin_h}"
+assert abs(bb.size.Z - (base_h + pin_h)) < 1.0, \
+    f"total height deviation / 总高偏差: {bb.size.Z:.2f} vs {base_h + pin_h}"
 
-# Volume: base plate + fin array / 体积：底板 + 鳍片阵列
+# Volume: base plate + pin array / 体积：底板 + 针阵列
 base_vol = base_l * base_w * base_h
-fin_vol  = fin_count * fin_len * fin_t * fin_h
-total_approx = base_vol + fin_vol
+pin_vol  = pin_nx * pin_ny * pin_w * pin_w * pin_h
+total_approx = base_vol + pin_vol
 # Allow ±5% tolerance / 允许 ±5% 宽容度
 assert total_approx * 0.95 < vol < total_approx * 1.05, \
     f"volume out of range / 体积超范围: {vol:.2f}, expected ~{total_approx:.2f}"
