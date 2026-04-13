@@ -55,10 +55,10 @@ cd tests/02-spur-gear && python gear_test.py
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| Box + GridLocations 孔阵列 | :x: | 100×80×10mm，四角 M5 通孔 |
-| fillet 顶面圆角 | :x: | 顶面边 R3 圆角 |
-| 选择器定位（sort_by 顶面） | :x: | `faces().sort_by(Axis.Z)[-1]` 取顶面 |
-| 参数化验证 | :x: | 修改 margin 参数后孔位跟随 |
+| Box + GridLocations 孔阵列 | :white_check_mark: | 100×80×10mm，四角 M5 通孔 |
+| fillet 顶面圆角 | :white_check_mark: | 顶面边 R3 圆角 |
+| 选择器定位（sort_by 顶面） | :white_check_mark: | `faces().sort_by(Axis.Z)[-1]` 取顶面 |
+| 参数化验证 | :white_check_mark: | 修改 margin 参数后孔位跟随 |
 
 **涉及 API**：`Box`, `GridLocations`, `Hole`, `fillet`, `sort_by`, `export_step`
 
@@ -369,7 +369,7 @@ cd tests/02-spur-gear && python gear_test.py
 
 | 类别 | 已完成 | 待开发 | 总计 |
 |------|--------|--------|------|
-| 零件建模 | 2 | 5 | 7 |
+| 零件建模 | 3 | 4 | 7 |
 | 曲面建模 | 0 | 3 | 3 |
 | 关节装配 | 0 | 3 | 3 |
 | 安装实战 | 0 | 3 | 3 |
@@ -377,7 +377,7 @@ cd tests/02-spur-gear && python gear_test.py
 | 制造工艺 | 0 | 2 | 2 |
 | 运动仿真 | 0 | 5 | 5 |
 | 验证工具 | 0 | 2 | 2 |
-| **合计** | **2** | **27** | **29** |
+| **合计** | **3** | **26** | **29** |
 
 ---
 
@@ -396,7 +396,7 @@ build123d-cad-skill-test/
 │   ├── 02-spur-gear/             # ✅ 直齿轮
 │   │   ├── gear_test.py
 │   │   └── output/
-│   ├── 03-mounting-plate/        # ⬜ 安装板
+│   ├── 03-mounting-plate/        # ✅ 安装板
 │   ├── 04-flange/                # ⬜ 法兰盘
 │   ├── 05-stepped-shaft/         # ⬜ 阶梯轴
 │   ├── 06-pipe-elbow/            # ⬜ 弯管接头
