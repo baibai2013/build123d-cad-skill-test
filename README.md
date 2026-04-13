@@ -62,35 +62,36 @@ cd tests/02-spur-gear && python gear_test.py
 
 **涉及 API**：`Box`, `GridLocations`, `Hole`, `fillet`, `sort_by`, `export_step`
 
-#### 04-flange — 法兰盘（旋转体 + 极坐标阵列）
+#### 04-flange — 法兰盘（Cylinder + 极坐标沉头孔阵列）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| Cylinder + 中心孔 | :white_check_mark: | 外径 80mm，高 8mm，中心孔 R15 |
+| Cylinder + 中心通孔 | :white_check_mark: | 外径 80mm，高 8mm，中心孔 R15mm |
 | PolarLocations 螺栓孔阵列 | :white_check_mark: | PCD 60mm，6 孔均布 |
-| CounterBoreHole 沉头孔 | :white_check_mark: | 沉头半径、沉头深度参数化 |
+| CounterBoreHole 沉头孔 | :white_check_mark: | 通孔 R4mm，沉头 R6.5mm，深 4mm |
 
 **涉及 API**：`Cylinder`, `Hole`, `PolarLocations`, `CounterBoreHole`, `export_step`
 
-#### 05-stepped-shaft — 阶梯轴（旋转体 + 键槽切割）
+#### 05-stepped-shaft — 阶梯轴（Polyline revolve + 参数化键槽 + chamfer）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| BuildSketch(Plane.XZ) + revolve | :white_check_mark: | 多段阶梯轮廓旋转体 |
-| 键槽切割（Mode.SUBTRACT extrude） | :white_check_mark: | 顶面定位草图减材料 |
-| chamfer 端面倒角 | :white_check_mark: | 两端 0.5mm 倒角 |
+| BuildSketch(Plane.XZ) + revolve | :white_check_mark: | 多段阶梯半截面 Polyline 绕 Z 轴旋转 360° |
+| 参数化键槽切割（key_angle 可旋转） | :white_check_mark: | 解析平面公式驱动键槽方位，默认 0°（-Y 面） |
+| chamfer 两端倒角 | :white_check_mark: | 两端最小圆弧边各 0.5mm 倒角 |
 
-**涉及 API**：`BuildSketch`, `Plane.XZ`, `Polyline`, `Line`, `make_face`, `revolve`, `chamfer`, `export_step`
+**涉及 API**：`BuildSketch`, `Plane.XZ`, `Polyline`, `make_face`, `revolve`, `Plane(origin, x_dir, z_dir)`, `extrude(Mode.SUBTRACT)`, `chamfer`, `export_step`
 
-#### 06-pipe-elbow — 弯管接头（Sweep 路径扫掠）
+#### 06-pipe-elbow — 弯管接头（Sweep 路径扫掠 + 两端连接口）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| Edge.make_circle 弧线路径 | :white_check_mark: | 弯曲半径 40mm，90° 弯管 |
-| 空心截面 sweep | :white_check_mark: | 外径 R15，壁厚 2mm |
-| 路径起点 Plane 构造 | :white_check_mark: | `Plane(path @ 0, z_dir=path % 0)` |
+| Edge.make_circle 弧线路径 | :white_check_mark: | XZ 平面 90° 弧，中心线半径 40mm |
+| 空心截面 sweep | :white_check_mark: | 外径 R15mm，壁厚 2mm，内径 R13mm |
+| 路径切线 Plane 构造 | :white_check_mark: | `Plane(path @ t, z_dir=path % t)`，t=0/1 |
+| 两端连接口（大径管箍） | :white_check_mark: | hub_r=18mm，长 8mm，向外延伸用于管道对接 |
 
-**涉及 API**：`Edge.make_circle`, `sweep`, `Circle`, `Mode.SUBTRACT`, `Plane`, `export_step`
+**涉及 API**：`Edge.make_circle`, `sweep`, `Circle`, `Mode.SUBTRACT`, `Plane`, `extrude`, `export_step`
 
 #### 07-heat-sink — 针状散热片（Pin-Fin，GridLocations 针阵列）
 
@@ -397,9 +398,9 @@ build123d-cad-skill-test/
 │   │   ├── gear_test.py
 │   │   └── output/
 │   ├── 03-mounting-plate/        # ✅ 安装板
-│   ├── 04-flange/                # ⬜ 法兰盘
-│   ├── 05-stepped-shaft/         # ⬜ 阶梯轴
-│   ├── 06-pipe-elbow/            # ⬜ 弯管接头
+│   ├── 04-flange/                # ✅ 法兰盘
+│   ├── 05-stepped-shaft/         # ✅ 阶梯轴
+│   ├── 06-pipe-elbow/            # ✅ 弯管接头
 │   ├── 07-heat-sink/             # ✅ 散热片
 │   ├── 08-loft-transition/       # ⬜ 多截面放样
 │   ├── 09-organic-shell/         # ⬜ 有机曲面
