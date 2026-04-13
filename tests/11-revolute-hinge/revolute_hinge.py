@@ -3,17 +3,20 @@
 Tests / 测试:
   Bone shape (Algebra Mode)    — Cylinder shaft + Sphere joint heads / 圆柱骨干 + 球形关节头
   RigidJoint on thigh          — fixed knee connection point / 大腿骨固定膝关节点
-  RevoluteJoint on shin        — 1 DOF knee, angular_range=(-120,10) / 小腿单自由度膝关节
-  connect_to auto-position     — j_thigh.connect_to(j_shin, angle) / 小腿自动定位
-  OCP Animation GIF            — knee flex/extend cycle animation / 屈伸循环动画
+  RevoluteJoint on shin        — 1 DOF knee, angular_range=(-10,120) / 小腿单自由度膝关节
+  connect_to auto-position     — j_thigh.connect_to(j_shin, angle=0) → straight / 小腿自动定位直腿
+  OCP Animation GIF            — knee flex/extend 60° cycle / 屈伸 60° 循环动画
 
 Design intent (Dave Cowden style) / 设计意图:
   Thigh bone: cylinder shaft (r=5, h=50mm) with sphere joint heads at hip and knee.
   Shin bone: cylinder shaft (r=4, h=45mm) with sphere heads, LOCAL origin = knee pivot.
-  Knee joint: RevoluteJoint, Y-axis rotation, range (-120°, 10°).
-  Animation: straight→full bend→straight, 6s cycle → saved as GIF.
+  Knee joint: RevoluteJoint, Y-axis rotation.
+    joint_location rotation (ry=-90°) corrects alignment so angle=0 = straight leg.
+    angular_range=(-10°, 120°): -10° slight hyperextension, 120° full flex.
+  Animation: straight(0°) → bent(60°) → straight(0°), simple open-close cycle → GIF.
   大腿骨：r=5mm 圆柱 + 两端球形关节头。小腿骨：r=4mm 圆柱，本地原点=膝关节轴心。
-  膝关节：Y轴旋转，范围 -120°~10°。动画：直腿→全屈→直腿 6s 循环→保存 GIF。
+  关节frame修正（ry=-90°）保证 angle=0 = 直腿（小腿朝下）。
+  动画：直腿(0°) → 屈膝(60°) → 直腿(0°)，循环 GIF。
 """
 
 from build123d import *
@@ -53,20 +56,23 @@ shin = shin_shaft + shin_knee + shin_ankle
 shin.label = "shin"
 
 # ===== Joints / 关节 =====
-# RigidJoint on thigh at z=0 (the knee attachment point) / 大腿骨膝关节固定点
+# RigidJoint on thigh at z=0 (the knee attachment point)
+# ry=-90° rotation corrects the joint frame so angle=0 = straight leg (shin pointing down)
+# 大腿骨膝关节固定点；ry=-90° 修正关节 frame 使 angle=0 对应直腿（小腿朝下）
 j_thigh = RigidJoint(
     label="knee_upper",
     to_part=thigh,
-    joint_location=Location((0, 0, 0))   # knee is at z=0 of thigh / 大腿骨 z=0 处
+    joint_location=Location((0, 0, 0), (0, -90, 0))   # ry=-90° → angle=0 = straight
 )
 
-# RevoluteJoint on shin: axis through local origin, rotate around Y (sagittal plane)
-# 小腿骨旋转关节：本地原点处 Y 轴（矢状面弯曲）
+# RevoluteJoint on shin: Y-axis rotation, range (-10°, 120°)
+# angle=0 → shin straight down; angle=60 → 60° knee flex
+# 小腿骨旋转关节：Y 轴旋转；angle=0=直腿，angle=60=屈膝 60°
 j_shin = RevoluteJoint(
     label="knee_lower",
     to_part=shin,
-    axis=Axis((0, 0, 0), (0, 1, 0)),     # Y-axis rotation / Y 轴旋转（如膝盖弯曲）
-    angular_range=(-120, 10)              # flex (-120°) to slight hyperextension (+10°)
+    axis=Axis((0, 0, 0), (0, 1, 0)),     # Y-axis rotation / Y 轴旋转
+    angular_range=(-10, 120)             # -10° hyperext to 120° full flex / -10°过伸 到 120°全屈
 )
 
 # ===== Connect at 0° (straight leg) / 连接为 0°（直腿） =====
@@ -88,19 +94,20 @@ print(f"Thigh volume / 大腿骨体积: {thigh_vol:.2f} mm³")
 print(f"Shin  volume / 小腿骨体积: {shin_vol:.2f} mm³")
 print(f"Assembly solids / 实体数:  {len(assembly.solids())}")
 
-# Volume rough checks: shaft + sphere heads / 体积粗检：骨干 + 两端球
+# Volume rough checks / 体积粗检
 thigh_approx = math.pi*thigh_r**2*thigh_h + (4/3)*math.pi*joint_r**3 + (4/3)*math.pi*hip_r**3
 shin_approx  = math.pi*shin_r**2*shin_h  + (4/3)*math.pi*joint_r**3 + (4/3)*math.pi*ankle_r**3
 assert thigh_vol > thigh_approx * 0.5,  f"thigh volume too small / 大腿骨体积过小: {thigh_vol:.0f}"
 assert shin_vol  > shin_approx  * 0.5,  f"shin volume too small / 小腿骨体积过小: {shin_vol:.0f}"
 assert len(assembly.solids()) == 2, "expected 2 solids / 应有 2 个实体"
 
-# Verify shin was repositioned: location should not be identity
-# 验证小腿骨已被定位：location 应非恒等
-shin_pos = shin.location.position
-print(f"Shin location / 小腿骨位置: {shin_pos}")
-assert abs(shin_pos.X) > 0.01 or abs(shin_pos.Z) > 0.01 or True, "shin not positioned / 小腿骨未定位"
+# Verify shin is pointing downward at angle=0 (straight leg)
+# 验证 angle=0 时小腿朝下（直腿）：ankle bbox 应主要在 -Z 方向
+bb_shin = shin.bounding_box()
+assert bb_shin.min.Z < -shin_h * 0.8, \
+    f"shin not pointing down at angle=0 / 小腿未朝下: Z_min={bb_shin.min.Z:.1f}"
 
+print(f"Shin ankle direction check (Z_min should be ≈ -{shin_h+ankle_r}): {bb_shin.min.Z:.1f}")
 print("✅ Layer 1+2 passed / 通过")
 
 # ===== Validation Layer 3: STEP re-import / STEP 重导入 =====
@@ -124,8 +131,8 @@ try:
     else:
         set_port(active_port)
 
-        # --- Static screenshots at 3 poses / 三个姿态静态截图 ---
-        for angle, label in [(0, "straight"), (-60, "bent60"), (-110, "full_flex")]:
+        # --- Static screenshots: straight / half-bend / full-bend / 三姿态截图 ---
+        for angle, label in [(0, "straight"), (30, "bent30"), (60, "bent60")]:
             j_thigh.connect_to(j_shin, angle=angle)
             asm_pose = Compound([thigh, shin], label="leg_joint")
             show(asm_pose, names=["leg_joint"], render_joints=True,
@@ -138,10 +145,12 @@ try:
         j_thigh.connect_to(j_shin, angle=0)
         assembly = Compound([thigh, shin], label="leg_joint")
 
-        # --- Animation GIF: 0° → -110° → 0°, 24 frames / 动画 GIF：24 帧 ---
-        angles_fw = list(range(0, -111, -5))          # 0 → -110, step -5 (23 steps)
-        angles_bk = list(range(-110, 1, 5))           # -110 → 0, step +5 (23 steps)
-        anim_angles = angles_fw + angles_bk            # 46 frames total
+        # --- Animation GIF: 0° → 60° → 0° (open and close) / 动画 GIF：屈伸 60° 循环 ---
+        # Step 5° per frame, 13 steps out + 13 steps back = 26 frames total
+        # 每帧 5°，去程 13 步 + 回程 13 步 = 共 26 帧
+        angles_fw = list(range(0, 61, 5))    # 0 → 60°, step 5° (13 steps)
+        angles_bk = list(range(60, -1, -5))  # 60° → 0, step -5° (13 steps)
+        anim_angles = angles_fw + angles_bk  # 26 frames total
 
         frame_paths = []
         show(assembly, names=["leg_joint"], render_joints=False, reset_camera=Camera.ISO)
@@ -168,29 +177,29 @@ try:
                 save_all=True,
                 append_images=imgs[1:],
                 loop=0,
-                duration=80      # 80ms per frame ≈ 12.5fps / 每帧 80ms
+                duration=100     # 100ms per frame = 10fps / 每帧 100ms
             )
-            # Clean up frame files / 删除帧文件
             for p in frame_paths:
                 os.remove(p)
             print(f"GIF saved / GIF 已保存: leg_joint_rotation.gif ({len(imgs)} frames)")
         except ImportError:
             print("Pillow not installed, GIF skipped / Pillow 未安装，跳过 GIF")
 
-        # --- Final show with OCP Animation track / OCP Animation 轨道展示 ---
+        # --- Final ISO screenshot / 最终 ISO 截图 ---
         j_thigh.connect_to(j_shin, angle=0)
         assembly_final = Compound([thigh, shin], label="leg_joint")
         show(assembly_final, names=["leg_joint"], render_joints=True, reset_camera=Camera.ISO)
         time.sleep(0.5)
         save_screenshot(os.path.join(output_dir, "revolute_hinge_ISO.png"))
 
+        # --- OCP Animation track / OCP Animation 轨道 ---
         try:
             anim = Animation(assembly_final)
-            # Knee flex/extend cycle: 0° → -110° (2s) → hold 1s → 0° (2s) → hold 1s
-            # 屈伸循环：直腿→全屈（2s）→保持（1s）→直腿（2s）→保持（1s）
+            # Flex/extend cycle: straight(0°) → bent(60°, 2s) → hold 1s → straight(0°, 4s) → hold 1s
+            # 屈伸循环：直腿(0°) → 屈膝(60°,2s) → 保持1s → 直腿(0°,4s) → 保持1s
             anim.add_track("/Group/leg_joint/shin", "ry",
-                           times =[0,    2,    3,    5,    6],
-                           values=[0, -110, -110,    0,    0])
+                           times =[0,   2,   3,   5,   6],
+                           values=[0,  60,  60,   0,   0])
             anim.animate(speed=1)
             print("OCP Animation playing / OCP 动画播放中 ✓")
         except Exception as e:
