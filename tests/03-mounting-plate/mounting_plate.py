@@ -2,8 +2,15 @@
 安装板 / Mounting Plate
 建模序列：取平板毛坯 → 四角打 M5 通孔 → 顶面圆角
 参数化重点：修改 margin 一个参数，孔位自动跟随
+
+测试覆盖：
+  - 几何断言（包围盒、体积、孔数）
+  - 选择器有效性（sort_by 顶面）
+  - 参数化联动（margin → 孔间距）
+  - OCP Viewer 多视角截图（ISO / TOP / FRONT）
 """
 from build123d import *
+import os
 
 # ===== 参数 =====
 l        = 100    # 板长 mm
@@ -30,29 +37,106 @@ with BuildPart() as plate:
     # Step 3: 顶面所有边倒 R3 圆角（选择器取顶面，无硬编码 Z 坐标）
     fillet(plate.faces().sort_by(Axis.Z)[-1].edges(), radius=fillet_r)
 
-# ===== 验证 =====
-bb = plate.part.bounding_box()
-print(f"尺寸: {bb.size.X:.1f} x {bb.size.Y:.1f} x {bb.size.Z:.1f} mm")
-print(f"体积: {plate.part.volume:.1f} mm³")
-print(f"孔间距: {hole_x_spacing} x {hole_y_spacing} mm（孔中心 GridLocations 跨度）")
-print(f"孔半径: {hole_r} mm  M5 标准通孔")
-print(f"※ 修改 margin={margin} → 孔位自动跟随（±孔间距同步变化）")
+# ============================================================
+# 几何断言验证
+# ============================================================
+print("=" * 50)
+print("几何断言验证")
+print("=" * 50)
 
-# ===== 参数化演示：验证 margin 联动 =====
-print(f"\n参数化联动验证：")
+bb = plate.part.bounding_box()
+vol = plate.part.volume
+
+# 包围盒
+assert abs(bb.size.X - l) < 0.01, f"长度错误: {bb.size.X:.2f} ≠ {l}"
+assert abs(bb.size.Y - w) < 0.01, f"宽度错误: {bb.size.Y:.2f} ≠ {w}"
+assert abs(bb.size.Z - h) < 0.01, f"厚度错误: {bb.size.Z:.2f} ≠ {h}"
+
+# 体积：实体 < 无孔毛坯（打孔 + 顶面 fillet 均减小体积）
+raw_vol = l * w * h
+assert vol < raw_vol, f"体积应 < 毛坯体积，实际 {vol:.1f} >= {raw_vol}"
+# 合理范围：保留 90%~99.9% 的毛坯体积（4孔 + fillet 共约 2~5%）
+assert vol > raw_vol * 0.90, f"体积异常偏小: {vol:.1f}，应 > {raw_vol*0.90:.0f}"
+
+# BRep 有效性
+assert plate.part.is_valid, "BRep 无效！"
+
+# 选择器验证：顶面 Z 坐标 = h/2
+top_face = plate.faces().sort_by(Axis.Z)[-1]
+top_z = top_face.center().Z
+assert abs(top_z - h / 2) < 0.01, f"顶面 Z 位置错误: {top_z:.3f} ≠ {h/2}"
+
+# 孔数验证：内圆弧面（圆柱孔侧面）= 4 个
+hole_faces = plate.faces().filter_by(GeomType.CYLINDER)
+assert len(hole_faces) >= 4, f"孔数错误: 期望 >=4，实际 {len(hole_faces)}"
+
+print(f"  ✓ 包围盒: {bb.size.X:.1f} × {bb.size.Y:.1f} × {bb.size.Z:.1f} mm")
+print(f"  ✓ 体积: {vol:.1f} mm³ (毛坯 {raw_vol} - 4孔)")
+print(f"  ✓ BRep 有效")
+print(f"  ✓ 顶面 Z={top_z:.3f} mm (期望 {h/2})")
+print(f"  ✓ 孔侧面数: {len(hole_faces)} (>=4)")
+
+# 参数化联动验证：margin 改变，孔间距自动跟随
+print("\n参数化联动验证：")
 for m_test in [8, 12, 16]:
     xs = l - 2 * m_test
     ys = w - 2 * m_test
     print(f"  margin={m_test:2d}mm → 孔间距 {xs}×{ys}mm")
 
+print("\n所有断言通过 ✓")
+
 # ===== 导出 =====
+os.makedirs("output", exist_ok=True)
 export_step(plate.part, "output/mounting_plate.step")
 print("\n导出完成: output/mounting_plate.step")
 
-# ===== OCP 预览 =====
+# ============================================================
+# OCP Viewer 多视角截图测试
+# 自动检测 ocp_vscode 运行端口，无需手动配置
+# ============================================================
 try:
-    from ocp_vscode import show
-    show(plate.part, names=["mounting_plate"], colors=["steelblue"])
-    print("OCP Viewer: 预览已加载")
-except Exception:
-    print("提示: 在 VS Code + OCP CAD Viewer 扩展中运行可看 3D 预览")
+    import time
+    from ocp_vscode import show, set_port, Camera, save_screenshot
+    from ocp_vscode.comms import port_check
+    from ocp_vscode.state import get_ports
+
+    # 自动探测活跃端口（从 state 文件中找第一个正在监听的端口）
+    active_port = None
+    for p in get_ports():
+        if port_check(int(p)):
+            active_port = int(p)
+            break
+
+    if active_port is None:
+        print("OCP Viewer: 未找到活跃端口，跳过截图测试")
+    else:
+        set_port(active_port)
+        print(f"\nOCP Viewer: 连接端口 {active_port}")
+
+        # 视角列表：(Camera枚举, 文件名后缀)
+        views = [
+            (Camera.ISO,   "iso"),
+            (Camera.TOP,   "top"),
+            (Camera.FRONT, "front"),
+        ]
+
+        for cam, label in views:
+            # 加载模型，指定视角
+            show(
+                plate.part,
+                names=["mounting_plate"],
+                colors=["steelblue"],
+                reset_camera=cam,
+            )
+            time.sleep(1.5)  # 等待渲染完成
+
+            screenshot_path = f"output/mounting_plate_{label}.png"
+            save_screenshot(screenshot_path)
+            print(f"  截图保存: {screenshot_path} ({label})")
+
+        print("OCP 截图测试完成 ✓")
+
+except ImportError:
+    print("提示: 安装 ocp_vscode 可在 VS Code 中查看 3D 预览")
+except Exception as e:
+    print(f"OCP 预览跳过（{type(e).__name__}: {e}）")
