@@ -121,11 +121,11 @@ cd tests/02-spur-gear && python gear_test.py
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| 多截面 Loft（5 个椭圆截面） | :x: | 变截面流线型壳体 |
-| shell 抽壳 | :x: | 均匀壁厚抽壳 |
-| Ellipse 参数化截面 | :x: | 长短轴随高度变化 |
+| 多截面 Loft（5 个椭圆截面） | :white_check_mark: | 变截面流线型壳体，体积 10920 mm³ |
+| offset(openings=) 抽壳 | :white_check_mark: | 壁厚 2mm，底面开放 |
+| Ellipse 参数化截面 | :white_check_mark: | 长短轴随高度变化（z=0~60） |
 
-**涉及 API**：`Ellipse`, `loft`, `shell`, `Plane.XY.offset`, `export_step`
+**涉及 API**：`Ellipse`, `loft`, `offset(openings=)`, `Plane.XY.offset`, `export_step`
 
 #### 10-sweep-twist — 扭转扫掠
 
@@ -371,14 +371,14 @@ cd tests/02-spur-gear && python gear_test.py
 | 类别 | 已完成 | 待开发 | 总计 |
 |------|--------|--------|------|
 | 零件建模 | 7 | 0 | 7 |
-| 曲面建模 | 1 | 2 | 3 |
+| 曲面建模 | 2 | 1 | 3 |
 | 关节装配 | 0 | 3 | 3 |
 | 安装实战 | 0 | 3 | 3 |
 | OCP 可视化 | 0 | 4 | 4 |
 | 制造工艺 | 0 | 2 | 2 |
 | 运动仿真 | 0 | 5 | 5 |
 | 验证工具 | 0 | 2 | 2 |
-| **合计** | **8** | **21** | **29** |
+| **合计** | **9** | **20** | **29** |
 
 ---
 
@@ -403,7 +403,7 @@ build123d-cad-skill-test/
 │   ├── 06-pipe-elbow/            # ✅ 弯管接头
 │   ├── 07-heat-sink/             # ✅ 散热片
 │   ├── 08-loft-transition/       # ✅ 多截面放样
-│   ├── 09-organic-shell/         # ⬜ 有机曲面
+│   ├── 09-organic-shell/         # ✅ 有机曲面
 │   ├── 10-sweep-twist/           # ⬜ 扭转扫掠
 │   ├── 11-revolute-hinge/        # ⬜ 旋转铰链
 │   ├── 12-quadruped-leg/         # ⬜ 四足腿链
