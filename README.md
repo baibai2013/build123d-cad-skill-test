@@ -96,9 +96,9 @@ cd tests/02-spur-gear && python gear_test.py
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| Box 底板 + 顶面定位 | :x: | 80×60×5mm 底板 |
-| GridLocations 鳍片阵列 | :x: | 8 片鳍片，高 25mm，厚 1.5mm |
-| 选择器取顶面作草图平面 | :x: | `sort_by(Axis.Z)[-1]` |
+| Box 底板 + 顶面定位 | :white_check_mark: | 80×60×5mm 底板 |
+| GridLocations 鳍片阵列 | :white_check_mark: | 8 片鳍片，高 25mm，厚 1.5mm |
+| 选择器取顶面作草图平面 | :white_check_mark: | `sort_by(Axis.Z)[-1]` |
 
 **涉及 API**：`Box`, `GridLocations`, `Rectangle`, `extrude`, `sort_by`, `export_step`
 
@@ -369,7 +369,7 @@ cd tests/02-spur-gear && python gear_test.py
 
 | 类别 | 已完成 | 待开发 | 总计 |
 |------|--------|--------|------|
-| 零件建模 | 6 | 1 | 7 |
+| 零件建模 | 7 | 0 | 7 |
 | 曲面建模 | 0 | 3 | 3 |
 | 关节装配 | 0 | 3 | 3 |
 | 安装实战 | 0 | 3 | 3 |
@@ -377,7 +377,7 @@ cd tests/02-spur-gear && python gear_test.py
 | 制造工艺 | 0 | 2 | 2 |
 | 运动仿真 | 0 | 5 | 5 |
 | 验证工具 | 0 | 2 | 2 |
-| **合计** | **6** | **23** | **29** |
+| **合计** | **7** | **22** | **29** |
 
 ---
 
@@ -400,7 +400,7 @@ build123d-cad-skill-test/
 │   ├── 04-flange/                # ⬜ 法兰盘
 │   ├── 05-stepped-shaft/         # ⬜ 阶梯轴
 │   ├── 06-pipe-elbow/            # ⬜ 弯管接头
-│   ├── 07-heat-sink/             # ⬜ 散热片
+│   ├── 07-heat-sink/             # ✅ 散热片
 │   ├── 08-loft-transition/       # ⬜ 多截面放样
 │   ├── 09-organic-shell/         # ⬜ 有机曲面
 │   ├── 10-sweep-twist/           # ⬜ 扭转扫掠
