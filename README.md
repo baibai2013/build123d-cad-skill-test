@@ -159,12 +159,14 @@ cd tests/02-spur-gear && python gear_test.py
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| RevoluteJoint 串联链 | :x: | hip → knee → ankle → foot 四级 |
-| angular_range 限位 | :x: | hip(±45°), knee(-90°~0°), ankle(±30°) |
-| 多关节角度设置 | :x: | 各关节设定到指定角度 |
-| 关节链运动验证 | :x: | 改变 hip 角度后下级跟随 |
+| RevoluteJoint 串联链 | :white_check_mark: | hip → knee → ankle → foot 四级 |
+| angular_range 限位 | :white_check_mark: | hip(±45°), knee(-90°~0°), ankle(±30°) |
+| 多关节角度设置 | :white_check_mark: | 各关节设定到指定角度（standing/walking/crouching） |
+| 关节链运动验证 | :white_check_mark: | 改变 hip 角度后下级跟随（foot Z delta=22.3mm） |
+| 行走循环 GIF 动画 | :white_check_mark: | 30帧 10fps，髋摆±25° + 膝屈伸 + 踝微调 |
+| OCP Animation 轨道 | :white_check_mark: | 6s 循环，upper_leg/lower_leg/foot 独立轨道 |
 
-**涉及 API**：`RevoluteJoint`, `RigidJoint`, `connect_to`, `Compound`, `label`, `export_step`
+**涉及 API**：`RevoluteJoint`, `RigidJoint`, `connect_to`, `Compound`, `label`, `Cylinder(align=MAX)`, `Sphere`, Algebra Mode(`+`), `Animation`, `add_track`, `save_screenshot`, `export_step`
 
 #### 13-ball-joint — 球铰万向节
 
@@ -376,13 +378,13 @@ cd tests/02-spur-gear && python gear_test.py
 |------|--------|--------|------|
 | 零件建模 | 7 | 0 | 7 |
 | 曲面建模 | 3 | 0 | 3 |
-| 关节装配 | 1 | 2 | 3 |
+| 关节装配 | 2 | 1 | 3 |
 | 安装实战 | 0 | 3 | 3 |
 | OCP 可视化 | 0 | 4 | 4 |
 | 制造工艺 | 0 | 2 | 2 |
 | 运动仿真 | 0 | 5 | 5 |
 | 验证工具 | 0 | 2 | 2 |
-| **合计** | **11** | **18** | **29** |
+| **合计** | **12** | **17** | **29** |
 
 ---
 
@@ -410,7 +412,7 @@ build123d-cad-skill-test/
 │   ├── 09-organic-shell/         # ✅ 有机曲面
 │   ├── 10-sweep-twist/           # ✅ 扭转扫掠
 │   ├── 11-revolute-hinge/        # ✅ 旋转铰链
-│   ├── 12-quadruped-leg/         # ⬜ 四足腿链
+│   ├── 12-quadruped-leg/         # ✅ 四足腿链
 │   ├── 13-ball-joint/            # ⬜ 球铰万向
 │   ├── 14-servo-mount/           # ⬜ 舵机座
 │   ├── 15-pcb-enclosure/         # ⬜ PCB 壳体
