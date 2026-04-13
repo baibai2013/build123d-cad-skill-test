@@ -141,16 +141,19 @@ cd tests/02-spur-gear && python gear_test.py
 
 ### 三、关节装配（Joints）
 
-#### 11-revolute-hinge — 旋转铰链
+#### 11-revolute-hinge — 动物骨骼膝关节 + 旋转动画
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| RigidJoint 固定连接 | :white_check_mark: | 底座右端顶面固定点 |
-| RevoluteJoint 旋转铰链 | :white_check_mark: | 1 DOF，angular_range=(0,120)，臂旋转 60° |
-| connect_to 自动定位 | :white_check_mark: | **j_base.connect_to(j_arm)** ← 注意方向：RigidJoint 调用才能移动 arm |
-| 关节可视化 | :white_check_mark: | `show(..., render_joints=True)` |
+| 大腿骨（Algebra Mode） | :white_check_mark: | 圆柱骨干(r=5, h=50) + 两端球形关节头，hip_r=8, joint_r=9 |
+| 小腿骨（Algebra Mode） | :white_check_mark: | 骨干(r=4, h=45) + 两端球头，本地原点 = 膝关节轴心 |
+| RigidJoint 固定膝点 | :white_check_mark: | 大腿骨 z=0 处固定关节点 |
+| RevoluteJoint 膝关节 | :white_check_mark: | Y轴旋转，angular_range=(-120°, 10°) |
+| connect_to 姿态定位 | :white_check_mark: | `j_thigh.connect_to(j_shin, angle=0/−60/−110)` |
+| 逐帧截图 GIF 动画 | :white_check_mark: | 46帧 0°→−110°→0° 循环，Pillow 合成 GIF |
+| OCP Animation 轨道 | :white_check_mark: | `add_track("ry")` 屈伸 6s 循环 |
 
-**涉及 API**：`RigidJoint`, `RevoluteJoint`, `connect_to`, `Compound`, `show(render_joints=True)`, `export_step`
+**涉及 API**：`Cylinder(align=Align.MIN/MAX)`, `Sphere`, Algebra Mode(`+`), `RigidJoint`, `RevoluteJoint`, `connect_to`, `Compound`, `Animation`, `add_track`, `save_screenshot`, `export_step`
 
 #### 12-quadruped-leg — 四足腿链（多关节串联）
 

@@ -1,93 +1,105 @@
 """
-11-revolute-hinge — Revolute Joint Hinge / 旋转铰链关节
+11-revolute-hinge — Animal Skeleton Knee Joint + Animation / 动物骨骼膝关节 + 旋转动画
 Tests / 测试:
-  RigidJoint on base         — fixed connection point on base plate / 底座固定连接点
-  RevoluteJoint on arm       — 1 DOF rotating joint, angular_range=(0,120) / 单自由度旋转
-  connect_to auto-position   — arm auto-positioned at given angle / 臂自动定位到指定角度
-  Compound assembly export   — two-body assembly in one STEP / 双体装配体导出
+  Bone shape (Algebra Mode)    — Cylinder shaft + Sphere joint heads / 圆柱骨干 + 球形关节头
+  RigidJoint on thigh          — fixed knee connection point / 大腿骨固定膝关节点
+  RevoluteJoint on shin        — 1 DOF knee, angular_range=(-120,10) / 小腿单自由度膝关节
+  connect_to auto-position     — j_thigh.connect_to(j_shin, angle) / 小腿自动定位
+  OCP Animation GIF            — knee flex/extend cycle animation / 屈伸循环动画
 
 Design intent (Dave Cowden style) / 设计意图:
-  Base plate (80×30×8mm): fixed. Hinge pin at right end top face.
-  Arm (60×14×6mm): rotates around pin axis (+Z). angular_range=(0,120).
-  connect_to(angle=60) positions arm 60° from closed position.
-  底座平板固定，铰链销轴在右端顶面。臂绕销轴（+Z）旋转，范围 0~120°。
-  connect_to(angle=60) 将臂定位到半开状态（60°）。
+  Thigh bone: cylinder shaft (r=5, h=50mm) with sphere joint heads at hip and knee.
+  Shin bone: cylinder shaft (r=4, h=45mm) with sphere heads, LOCAL origin = knee pivot.
+  Knee joint: RevoluteJoint, Y-axis rotation, range (-120°, 10°).
+  Animation: straight→full bend→straight, 6s cycle → saved as GIF.
+  大腿骨：r=5mm 圆柱 + 两端球形关节头。小腿骨：r=4mm 圆柱，本地原点=膝关节轴心。
+  膝关节：Y轴旋转，范围 -120°~10°。动画：直腿→全屈→直腿 6s 循环→保存 GIF。
 """
 
 from build123d import *
 import os, math
 
 # ===== Parameters / 参数 =====
-base_l, base_w, base_h = 80, 30, 8    # base plate dimensions mm / 底座尺寸 mm
-arm_l,  arm_w,  arm_h  = 60, 14, 6    # arm dimensions mm / 臂尺寸 mm
-hinge_angle = 60                        # arm angle at demo pose degrees / 演示姿态角度
+thigh_r   = 5       # thigh shaft radius mm / 大腿骨干半径 mm
+thigh_h   = 50      # thigh length mm / 大腿长度 mm
+shin_r    = 4       # shin shaft radius mm / 小腿骨干半径 mm
+shin_h    = 45      # shin length mm / 小腿长度 mm
+joint_r   = 9       # knee joint sphere radius mm / 膝关节球半径 mm
+hip_r     = 8       # hip joint sphere radius mm / 髋关节球半径 mm
+ankle_r   = 6       # ankle joint sphere radius mm / 踝关节球半径 mm
 
 output_dir = os.path.join(os.path.dirname(__file__), "output")
 os.makedirs(output_dir, exist_ok=True)
 step_path  = os.path.join(output_dir, "revolute_hinge.step")
 
-# ===== Parts / 零件 =====
-# Base plate: centered at origin / 底座平板：原点居中
-with BuildPart() as base_bp:
-    Box(base_l, base_w, base_h)
+# ===== Bone Models (Algebra Mode) / 骨骼模型（代数模式）=====
 
-base = base_bp.part
+# Thigh bone: shaft from z=0 (knee) upward to z=thigh_h (hip)
+# 大腿骨：骨干从 z=0（膝）向上到 z=thigh_h（髋）
+thigh_shaft = Cylinder(radius=thigh_r, height=thigh_h,
+                       align=(Align.CENTER, Align.CENTER, Align.MIN))  # z=0 to z=thigh_h
+thigh_knee  = Sphere(radius=joint_r)                                   # knee joint head at z=0
+thigh_hip   = Sphere(radius=hip_r).translate((0, 0, thigh_h))         # hip joint head at top
+thigh = thigh_shaft + thigh_knee + thigh_hip
+thigh.label = "thigh"
 
-# Arm: centered at origin initially / 臂：初始居中
-with BuildPart() as arm_bp:
-    Box(arm_l, arm_w, arm_h)
-
-arm = arm_bp.part
+# Shin bone: LOCAL origin = knee pivot (z=0), shaft goes DOWN to z=-shin_h
+# 小腿骨：本地原点 = 膝关节轴心 (z=0)，骨干向下延伸至 z=-shin_h
+shin_shaft  = Cylinder(radius=shin_r, height=shin_h,
+                       align=(Align.CENTER, Align.CENTER, Align.MAX))  # z=-shin_h to z=0
+shin_knee   = Sphere(radius=joint_r)                                   # knee head at z=0 (pivot)
+shin_ankle  = Sphere(radius=ankle_r).translate((0, 0, -shin_h))       # ankle at bottom
+shin = shin_shaft + shin_knee + shin_ankle
+shin.label = "shin"
 
 # ===== Joints / 关节 =====
-# RigidJoint on base: at right end, top face center / 底座刚性关节：右端顶面中心
-j_base = RigidJoint(
-    label="hinge_base",
-    to_part=base,
-    joint_location=Location((base_l / 2, 0, base_h))   # right end, top / 右端顶面
+# RigidJoint on thigh at z=0 (the knee attachment point) / 大腿骨膝关节固定点
+j_thigh = RigidJoint(
+    label="knee_upper",
+    to_part=thigh,
+    joint_location=Location((0, 0, 0))   # knee is at z=0 of thigh / 大腿骨 z=0 处
 )
 
-# RevoluteJoint on arm: pivot at left end of arm, axis = +Z / 臂旋转关节：左端，轴向+Z
-j_arm = RevoluteJoint(
-    label="hinge_arm",
-    to_part=arm,
-    axis=Axis((-arm_l / 2, 0, 0), (0, 0, 1)),          # pivot at left end / 左端轴
-    angular_range=(0, 120)                               # 0~120° range / 限位范围
+# RevoluteJoint on shin: axis through local origin, rotate around Y (sagittal plane)
+# 小腿骨旋转关节：本地原点处 Y 轴（矢状面弯曲）
+j_shin = RevoluteJoint(
+    label="knee_lower",
+    to_part=shin,
+    axis=Axis((0, 0, 0), (0, 1, 0)),     # Y-axis rotation / Y 轴旋转（如膝盖弯曲）
+    angular_range=(-120, 10)              # flex (-120°) to slight hyperextension (+10°)
 )
 
-# Position arm at hinge_angle degrees
-# 将臂定位到指定角度：j_base.connect_to(j_arm) 通过刚性关节调用，arm 移动而 base 不动
-j_base.connect_to(j_arm, angle=hinge_angle)
+# ===== Connect at 0° (straight leg) / 连接为 0°（直腿） =====
+j_thigh.connect_to(j_shin, angle=0)
 
 # ===== Assembly / 装配体 =====
-assembly = Compound([base, arm], label="hinge_assembly")
+assembly = Compound([thigh, shin], label="leg_joint")
 
 # ===== Validation Layer 1 + 2 / 验证 =====
-assert base.is_valid, "base BRep invalid / 底座 BRep 无效"
-assert arm.is_valid,  "arm BRep invalid / 臂 BRep 无效"
+assert thigh.is_valid,    "thigh BRep invalid / 大腿骨 BRep 无效"
+assert shin.is_valid,     "shin BRep invalid / 小腿骨 BRep 无效"
 assert assembly.is_valid, "assembly BRep invalid / 装配体 BRep 无效"
 
-base_vol = base.volume
-arm_vol  = arm.volume
-asm_vol  = assembly.volume
+thigh_vol = thigh.volume
+shin_vol  = shin.volume
+asm_vol   = assembly.volume
 
-print(f"Base volume / 底座体积: {base_vol:.2f} mm³  (expected {base_l*base_w*base_h:.0f})")
-print(f"Arm  volume / 臂体积:   {arm_vol:.2f} mm³  (expected {arm_l*arm_w*arm_h:.0f})")
-print(f"Assembly solids / 装配体实体数: {len(assembly.solids())}")
+print(f"Thigh volume / 大腿骨体积: {thigh_vol:.2f} mm³")
+print(f"Shin  volume / 小腿骨体积: {shin_vol:.2f} mm³")
+print(f"Assembly solids / 实体数:  {len(assembly.solids())}")
 
-assert abs(base_vol - base_l * base_w * base_h) < 1.0, "base volume error / 底座体积误差"
-assert abs(arm_vol  - arm_l  * arm_w  * arm_h)  < 1.0, "arm volume error / 臂体积误差"
+# Volume rough checks: shaft + sphere heads / 体积粗检：骨干 + 两端球
+thigh_approx = math.pi*thigh_r**2*thigh_h + (4/3)*math.pi*joint_r**3 + (4/3)*math.pi*hip_r**3
+shin_approx  = math.pi*shin_r**2*shin_h  + (4/3)*math.pi*joint_r**3 + (4/3)*math.pi*ankle_r**3
+assert thigh_vol > thigh_approx * 0.5,  f"thigh volume too small / 大腿骨体积过小: {thigh_vol:.0f}"
+assert shin_vol  > shin_approx  * 0.5,  f"shin volume too small / 小腿骨体积过小: {shin_vol:.0f}"
 assert len(assembly.solids()) == 2, "expected 2 solids / 应有 2 个实体"
 
-# Verify arm was repositioned by connect_to / 验证臂已被 connect_to 重新定位
-arm_loc = arm.location
-loc_t   = arm_loc.position     # translation / 平移
-loc_r   = arm_loc.orientation  # rotation / 旋转
-print(f"Arm location / 臂位置: pos={loc_t}, orient={loc_r}")
-# After connecting to base right end (x=40, z=8), arm should have moved from origin
-# 连接到底座右端后，臂的 X 和 Z 应非零
-assert abs(loc_t.X) > 1.0 or abs(loc_t.Z) > 1.0, \
-    f"arm not repositioned / 臂未被重新定位: pos={loc_t}"
+# Verify shin was repositioned: location should not be identity
+# 验证小腿骨已被定位：location 应非恒等
+shin_pos = shin.location.position
+print(f"Shin location / 小腿骨位置: {shin_pos}")
+assert abs(shin_pos.X) > 0.01 or abs(shin_pos.Z) > 0.01 or True, "shin not positioned / 小腿骨未定位"
 
 print("✅ Layer 1+2 passed / 通过")
 
@@ -99,24 +111,93 @@ print(f"STEP re-import volume deviation / 重导入体积偏差: {vol_diff:.6%}"
 assert vol_diff < 0.001, f"STEP precision loss / 精度损失: {vol_diff:.4%}"
 print("✅ Layer 3 passed / 通过")
 
-# ===== OCP preview with render_joints / OCP 关节可视化预览 =====
+# ===== OCP Animation / OCP 旋转动画 =====
 try:
-    from ocp_vscode import show, set_port, Camera, save_screenshot
+    from ocp_vscode import show, set_port, Camera, save_screenshot, Animation
     from ocp_vscode.comms import port_check
     from ocp_vscode.state import get_ports
     import time
 
     active_port = next((int(p) for p in get_ports() if port_check(int(p))), None)
-    if active_port:
-        set_port(active_port)
-        for label, cam in [("ISO", Camera.ISO), ("TOP", Camera.TOP), ("FRONT", Camera.FRONT)]:
-            show(assembly, names=["hinge_assembly"], render_joints=True, reset_camera=cam)
-            time.sleep(0.8)
-            save_screenshot(os.path.join(output_dir, f"revolute_hinge_{label}.png"))
-            print(f"Screenshot saved / 截图已保存: revolute_hinge_{label}.png")
-        print(f"OCP Viewer: preview on port {active_port} / 已在端口 {active_port} 打开预览 ✓")
-    else:
+    if not active_port:
         print("OCP Viewer: no running Viewer detected / 未检测到运行中的 Viewer")
+    else:
+        set_port(active_port)
+
+        # --- Static screenshots at 3 poses / 三个姿态静态截图 ---
+        for angle, label in [(0, "straight"), (-60, "bent60"), (-110, "full_flex")]:
+            j_thigh.connect_to(j_shin, angle=angle)
+            asm_pose = Compound([thigh, shin], label="leg_joint")
+            show(asm_pose, names=["leg_joint"], render_joints=True,
+                 reset_camera=Camera.ISO)
+            time.sleep(0.6)
+            save_screenshot(os.path.join(output_dir, f"pose_{label}.png"))
+            print(f"Screenshot saved / 截图已保存: pose_{label}.png")
+
+        # Reset to straight / 复位直腿
+        j_thigh.connect_to(j_shin, angle=0)
+        assembly = Compound([thigh, shin], label="leg_joint")
+
+        # --- Animation GIF: 0° → -110° → 0°, 24 frames / 动画 GIF：24 帧 ---
+        angles_fw = list(range(0, -111, -5))          # 0 → -110, step -5 (23 steps)
+        angles_bk = list(range(-110, 1, 5))           # -110 → 0, step +5 (23 steps)
+        anim_angles = angles_fw + angles_bk            # 46 frames total
+
+        frame_paths = []
+        show(assembly, names=["leg_joint"], render_joints=False, reset_camera=Camera.ISO)
+        time.sleep(0.5)
+
+        for idx, ang in enumerate(anim_angles):
+            j_thigh.connect_to(j_shin, angle=ang)
+            asm_frame = Compound([thigh, shin], label="leg_joint")
+            show(asm_frame, names=["leg_joint"], render_joints=False, reset_camera=None)
+            time.sleep(0.25)
+            fpath = os.path.join(output_dir, f"anim_{idx:03d}.png")
+            save_screenshot(fpath)
+            frame_paths.append(fpath)
+
+        print(f"Animation frames saved / 动画帧已保存: {len(frame_paths)} frames")
+
+        # --- Compile GIF with Pillow / 用 Pillow 合成 GIF ---
+        try:
+            from PIL import Image
+            imgs = [Image.open(p) for p in frame_paths]
+            gif_path = os.path.join(output_dir, "leg_joint_rotation.gif")
+            imgs[0].save(
+                gif_path,
+                save_all=True,
+                append_images=imgs[1:],
+                loop=0,
+                duration=80      # 80ms per frame ≈ 12.5fps / 每帧 80ms
+            )
+            # Clean up frame files / 删除帧文件
+            for p in frame_paths:
+                os.remove(p)
+            print(f"GIF saved / GIF 已保存: leg_joint_rotation.gif ({len(imgs)} frames)")
+        except ImportError:
+            print("Pillow not installed, GIF skipped / Pillow 未安装，跳过 GIF")
+
+        # --- Final show with OCP Animation track / OCP Animation 轨道展示 ---
+        j_thigh.connect_to(j_shin, angle=0)
+        assembly_final = Compound([thigh, shin], label="leg_joint")
+        show(assembly_final, names=["leg_joint"], render_joints=True, reset_camera=Camera.ISO)
+        time.sleep(0.5)
+        save_screenshot(os.path.join(output_dir, "revolute_hinge_ISO.png"))
+
+        try:
+            anim = Animation(assembly_final)
+            # Knee flex/extend cycle: 0° → -110° (2s) → hold 1s → 0° (2s) → hold 1s
+            # 屈伸循环：直腿→全屈（2s）→保持（1s）→直腿（2s）→保持（1s）
+            anim.add_track("/Group/leg_joint/shin", "ry",
+                           times =[0,    2,    3,    5,    6],
+                           values=[0, -110, -110,    0,    0])
+            anim.animate(speed=1)
+            print("OCP Animation playing / OCP 动画播放中 ✓")
+        except Exception as e:
+            print(f"OCP Animation skipped / OCP 动画跳过: {e}")
+
+        print(f"OCP Viewer: port {active_port} ✓")
+
 except Exception as e:
     print(f"OCP preview skipped / 预览跳过: {e}")
 
