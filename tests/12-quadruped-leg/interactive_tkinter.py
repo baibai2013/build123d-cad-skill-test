@@ -1,29 +1,31 @@
 """
-12-quadruped-leg Interactive Mode -- Jupyter Slider Control
+12-quadruped-leg Interactive Controller (Route A)
+=================================================
+tkinter GUI + build123d backend + OCP CAD Viewer frontend
 
 Usage:
-  1. Open this file in VS Code with Jupyter extension
-  2. Or run: jupyter notebook, then open this as .ipynb
-  3. Drag sliders to control hip / knee / ankle angles in real-time
-  4. OCP CAD Viewer updates instantly
+  1. Open OCP CAD Viewer in VS Code
+  2. Run: python interactive_tkinter.py
+  3. Drag sliders to control hip / knee / ankle angles
+  4. OCP Viewer updates in real-time (~200ms per frame)
 
-Requires: ipywidgets, ocp_vscode, build123d
+Architecture:
+  tkinter (stdlib, zero install) -> build123d Joint system -> OCP show()
+  - ttk.Scale sliders x 3 joints
+  - Preset buttons (standing / walking / crouching)
+  - Debounced updates (root.after) to limit OCP refresh rate
+
+Design (Peter Corke + Dave Cowden):
+  Peter Corke: "Define the kinematics first, then build geometry around it."
+  Dave Cowden: "The code describes operations, not coordinates."
 """
 
 from build123d import *
-from ocp_vscode import show, set_port, Camera
-from ocp_vscode.comms import port_check
-from ocp_vscode.state import get_ports
+import tkinter as tk
+from tkinter import ttk
+import math, os, threading, time
 
-# ===== Connect to OCP Viewer =====
-active_port = next((int(p) for p in get_ports() if port_check(int(p))), None)
-if active_port:
-    set_port(active_port)
-    print(f"OCP Viewer connected: port {active_port}")
-else:
-    print("No OCP Viewer detected. Start OCP CAD Viewer in VS Code first.")
-
-# ===== Parameters (synced with quadruped_leg.py — slender dog-bone) =====
+# ===== Parameters (synced with quadruped_leg.py) =====
 
 hip_r       = 11
 hip_h       = 5
@@ -149,7 +151,8 @@ with BuildPart() as foot_part:
 foot_pad = foot_part.part
 foot_pad.label = "foot_pad"
 
-# ===== Joints =====
+# ===== Joints (4-level serial chain) =====
+
 j_hip_rigid = RigidJoint("hip_out", to_part=hip_mount,
     joint_location=Location((0, 0, -hip_h / 2), (0, -90, 0)))
 j_hip_rev = RevoluteJoint("hip_in", to_part=femur,
@@ -169,108 +172,192 @@ j_foot_rigid = RigidJoint("foot_out", to_part=metatarsus,
     joint_location=Location((0, 0, -meta_l)))
 j_foot_mount = RigidJoint("foot_in", to_part=foot_pad)
 
-# ===== FK Helpers =====
-
 NAMES  = ["hip_mount", "femur", "tibia", "metatarsus", "foot_pad", "lig_front", "lig_rear"]
 COLORS = ["gray", "steelblue", "cadetblue", "dodgerblue", "darkgray", "crimson", "crimson"]
+
+# ===== FK Helpers =====
+
+def set_pose(hip_a, knee_a, ankle_a):
+    j_hip_rigid.connect_to(j_hip_rev, angle=hip_a)
+    j_knee_rigid.connect_to(j_knee_rev, angle=knee_a)
+    j_ankle_rigid.connect_to(j_ankle_rev, angle=ankle_a)
+    j_foot_rigid.connect_to(j_foot_mount)
 
 def compute_ligaments():
     hp = j_hip_rigid.location.position
     kp = j_knee_rigid.location.position
     ap = j_ankle_rigid.location.position
+
     f_dir = (kp - hp).normalized()
     t_dir = (ap - kp).normalized()
+
     x_axis = Vector(1, 0, 0)
     f_perp = f_dir.cross(x_axis)
     if f_perp.length < 0.001:
         f_perp = Vector(0, 1, 0)
     else:
         f_perp = f_perp.normalized()
+
     t_perp = t_dir.cross(x_axis)
     if t_perp.length < 0.001:
         t_perp = Vector(0, 1, 0)
     else:
         t_perp = t_perp.normalized()
+
     fa = kp - f_dir * lig_up
     f_front = fa + f_perp * lig_off
     f_rear  = fa - f_perp * lig_off
+
     ta = kp + t_dir * lig_down
     t_front = ta + t_perp * lig_off
     t_rear  = ta - t_perp * lig_off
+
     lf = make_bar(f_front, t_front)
     lf.label = "lig_front"
     lr = make_bar(f_rear, t_rear)
     lr.label = "lig_rear"
     return lf, lr
 
-def update_view(hip_a, knee_a, ankle_a):
-    """Set pose and update OCP Viewer."""
-    j_hip_rigid.connect_to(j_hip_rev, angle=hip_a)
-    j_knee_rigid.connect_to(j_knee_rev, angle=knee_a)
-    j_ankle_rigid.connect_to(j_ankle_rev, angle=ankle_a)
-    j_foot_rigid.connect_to(j_foot_mount)
-    lf, lr = compute_ligaments()
-    show(hip_mount, femur, tibia, metatarsus, foot_pad, lf, lr,
-         names=NAMES, colors=COLORS, reset_camera=Camera.KEEP)
+# ===== Connect to OCP Viewer =====
 
-# ===== Interactive Sliders =====
 try:
-    import ipywidgets as widgets
-    from IPython.display import display
+    from ocp_vscode import show, set_port, Camera
+    from ocp_vscode.comms import port_check
+    from ocp_vscode.state import get_ports
 
-    hip_slider = widgets.FloatSlider(
-        value=0, min=-45, max=45, step=1,
-        description='Hip:', continuous_update=True,
-        style={'description_width': '60px'},
-        layout=widgets.Layout(width='400px'))
-
-    knee_slider = widgets.FloatSlider(
-        value=0, min=-90, max=0, step=1,
-        description='Knee:', continuous_update=True,
-        style={'description_width': '60px'},
-        layout=widgets.Layout(width='400px'))
-
-    ankle_slider = widgets.FloatSlider(
-        value=0, min=-30, max=30, step=1,
-        description='Ankle:', continuous_update=True,
-        style={'description_width': '60px'},
-        layout=widgets.Layout(width='400px'))
-
-    def on_slider_change(change):
-        update_view(hip_slider.value, knee_slider.value, ankle_slider.value)
-
-    hip_slider.observe(on_slider_change, names='value')
-    knee_slider.observe(on_slider_change, names='value')
-    ankle_slider.observe(on_slider_change, names='value')
-
-    # Show initial pose
-    update_view(0, 0, 0)
-
-    print("Drag sliders to control joint angles:")
-    display(widgets.VBox([hip_slider, knee_slider, ankle_slider]))
-
+    active_port = next((int(p) for p in get_ports() if port_check(int(p))), None)
+    if active_port:
+        set_port(active_port)
+        print(f"OCP Viewer connected: port {active_port}")
+    else:
+        print("No OCP Viewer detected. Start OCP CAD Viewer in VS Code first.")
+        active_port = None
 except ImportError:
-    # Fallback: simple terminal input loop
-    print("ipywidgets not available. Using terminal input mode.")
-    print("Enter joint angles as: hip knee ankle (e.g.: 20 -30 10)")
-    print("Type 'q' to quit.\n")
+    print("ocp_vscode not installed. Install with: pip install ocp-vscode")
+    active_port = None
+    show = None
 
-    update_view(0, 0, 0)
+# ===== Show initial pose =====
+set_pose(0, 0, 0)
+lf, lr = compute_ligaments()
+if show and active_port:
+    show(hip_mount, femur, tibia, metatarsus, foot_pad, lf, lr,
+         names=NAMES, colors=COLORS, reset_camera=Camera.ISO)
 
-    while True:
+# ===== tkinter GUI =====
+
+class LegController:
+    def __init__(self, root):
+        self.root = root
+        root.title("Quadruped Leg Controller")
+        root.resizable(False, False)
+
+        self.hip_var   = tk.DoubleVar(value=0)
+        self.knee_var  = tk.DoubleVar(value=0)
+        self.ankle_var = tk.DoubleVar(value=0)
+
+        self._pending_update = None
+        self._update_interval = 150
+
+        self.status_var = tk.StringVar(value="Ready")
+
+        self._build_ui()
+
+    def _build_ui(self):
+        main = ttk.Frame(self.root, padding=10)
+        main.grid(sticky="nsew")
+
+        ttk.Label(main, text="Quadruped Leg Controller",
+                  font=("Segoe UI", 14, "bold")).grid(row=0, column=0,
+                  columnspan=3, pady=(0, 10))
+
+        joints = [
+            ("Hip",   self.hip_var,   -45,  45),
+            ("Knee",  self.knee_var,  -90,   0),
+            ("Ankle", self.ankle_var, -30,  30),
+        ]
+
+        for i, (name, var, lo, hi) in enumerate(joints):
+            row = i + 1
+            ttk.Label(main, text=f"{name}:", width=8).grid(
+                row=row, column=0, sticky="w", padx=(0, 5))
+
+            scale = ttk.Scale(main, from_=lo, to=hi, orient="horizontal",
+                              variable=var, length=300,
+                              command=lambda v, n=name: self._on_slider_change())
+            scale.grid(row=row, column=1, padx=5)
+
+            lbl = ttk.Label(main, textvariable=var, width=6)
+            lbl.grid(row=row, column=2, padx=(5, 0))
+            var.trace_add("write", lambda *_, v=var, l=lbl:
+                          l.config(text=f"{v.get():.0f}\u00b0"))
+
+        btn_frame = ttk.Frame(main)
+        btn_frame.grid(row=4, column=0, columnspan=3, pady=10)
+
+        presets = [
+            ("Standing",  10,   -25,   8),
+            ("Walking",   30,   -50,  15),
+            ("Crouching", -10,  -70,  25),
+            ("Kick",      -30,  -10,  25),
+        ]
+
+        for name, ha, ka, aa in presets:
+            btn = ttk.Button(btn_frame, text=name,
+                             command=lambda h=ha, k=ka, a=aa:
+                             self._set_preset(h, k, a))
+            btn.pack(side="left", padx=3)
+
+        status_frame = ttk.Frame(main)
+        status_frame.grid(row=5, column=0, columnspan=3, pady=(5, 0), sticky="ew")
+
+        port_text = f"OCP Viewer: port {active_port}" if active_port else "OCP Viewer: not connected"
+        ttk.Label(status_frame, text=port_text,
+                  foreground="green" if active_port else "red").pack(side="left")
+        ttk.Label(status_frame, textvariable=self.status_var).pack(side="right")
+
+    def _set_preset(self, hip_a, knee_a, ankle_a):
+        self.hip_var.set(hip_a)
+        self.knee_var.set(knee_a)
+        self.ankle_var.set(ankle_a)
+        self._schedule_update()
+
+    def _on_slider_change(self):
+        self._schedule_update()
+
+    def _schedule_update(self):
+        if self._pending_update:
+            self.root.after_cancel(self._pending_update)
+        self._pending_update = self.root.after(
+            self._update_interval, self._do_update)
+
+    def _do_update(self):
+        self._pending_update = None
+        ha = self.hip_var.get()
+        ka = self.knee_var.get()
+        aa = self.ankle_var.get()
+
+        self.status_var.set("Updating...")
+        self.root.update_idletasks()
+
         try:
-            inp = input("hip knee ankle > ").strip()
-            if inp.lower() == 'q':
-                break
-            parts = inp.split()
-            if len(parts) == 3:
-                ha, ka, aa = float(parts[0]), float(parts[1]), float(parts[2])
-                ha = max(-45, min(45, ha))
-                ka = max(-90, min(0, ka))
-                aa = max(-30, min(30, aa))
-                update_view(ha, ka, aa)
-                print(f"  -> hip={ha}, knee={ka}, ankle={aa}")
-            else:
-                print("  Usage: hip knee ankle (e.g.: 20 -30 10)")
-        except (ValueError, EOFError):
-            break
+            set_pose(ha, ka, aa)
+            lf, lr = compute_ligaments()
+
+            if show and active_port:
+                show(hip_mount, femur, tibia, metatarsus, foot_pad, lf, lr,
+                     names=NAMES, colors=COLORS, reset_camera=Camera.KEEP)
+
+            self.status_var.set(f"hip={ha:.0f} knee={ka:.0f} ankle={aa:.0f}")
+        except Exception as e:
+            self.status_var.set(f"Error: {e}")
+
+
+def main():
+    root = tk.Tk()
+    app = LegController(root)
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()

@@ -155,18 +155,25 @@ cd tests/02-spur-gear && python gear_test.py
 
 **涉及 API**：`Cylinder(align=Align.MIN/MAX)`, `Sphere`, Algebra Mode(`+`), `RigidJoint`, `RevoluteJoint`, `connect_to`, `Compound`, `Animation`, `add_track`, `save_screenshot`, `export_step`
 
-#### 12-quadruped-leg — 四足腿链（多关节串联）
+#### 12-quadruped-leg — 四足腿链（7 部件板状结构 + 参考图驱动）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| RevoluteJoint 串联链 | :white_check_mark: | hip → knee → ankle → foot 四级 |
-| angular_range 限位 | :white_check_mark: | hip(±45°), knee(-90°~0°), ankle(±30°) |
-| 多关节角度设置 | :white_check_mark: | 各关节设定到指定角度（standing/walking/crouching） |
-| 关节链运动验证 | :white_check_mark: | 改变 hip 角度后下级跟随（foot Z delta=22.3mm） |
-| 行走循环 GIF 动画 | :white_check_mark: | 30帧 10fps，髋摆±25° + 膝屈伸 + 踝微调 |
-| OCP Animation 轨道 | :white_check_mark: | 6s 循环，upper_leg/lower_leg/foot 独立轨道 |
+| 7 部件板状结构 | :white_check_mark: | hip_mount + femur + tibia + metatarsus + foot_pad + 2 ligaments |
+| 锥形板材造型 | :white_check_mark: | Polyline 梯形轮廓 + fillet，匹配参考图 CNC 铝板 |
+| 弧形脚掌 | :white_check_mark: | ThreePointArc 弧底 + 扇形扩展（ref: 182mm → 36mm） |
+| RevoluteJoint 4 级串联 | :white_check_mark: | hip(±45°) → knee(-90°~0°) → ankle(±30°) → foot(fixed) |
+| FK 韧带实时跟随 | :white_check_mark: | Joint.location.position 读取真实世界坐标，韧带紧贴膝关节 |
+| 行走循环 GIF 动画 | :white_check_mark: | 40 帧 Peter Corke 步态（swing 40% / stance 60%） |
+| OCP Animation 轨道 | :white_check_mark: | FK 平移关键帧，5 刚体独立轨道 |
+| tkinter 交互控制 | :white_check_mark: | 滑条 × 3 + 预设按钮 + OCP 实时更新（Route A） |
+| PyBullet 物理仿真 | :white_check_mark: | URDF + 重力/碰撞/关节力矩（Route B） |
+| ipywidgets 交互 | :white_check_mark: | Jupyter slider 控制（备选交互方式） |
+| STEP 重导入验证 | :white_check_mark: | 体积偏差 0.000000% |
 
-**涉及 API**：`RevoluteJoint`, `RigidJoint`, `connect_to`, `Compound`, `label`, `Cylinder(align=MAX)`, `Sphere`, Algebra Mode(`+`), `Animation`, `add_track`, `save_screenshot`, `export_step`
+**参考尺寸（1:5 缩放）**：Femur 245→50mm（锥形 18→14mm），Tibia 220→45mm（锥形 16→12mm），Foot 84×182→14×36mm（弧形）
+
+**涉及 API**：`Polyline`, `make_face`, `fillet(vertices)`, `ThreePointArc`, `RevoluteJoint`, `RigidJoint`, `connect_to`, `Compound`, `PolarLocations`, `Hole`, `Animation`, `add_track`, `save_screenshot`, `export_step`
 
 #### 13-ball-joint — 球铰万向节
 
