@@ -250,6 +250,8 @@ Phase 4: 仿真方案脑图（3选项 + Peter Corke建议）
 
 本规范替换 SKILL.md 中「回答工作流（Agentic Protocol）」的 Step 1~5。
 
+**概念草图（Step 1.5）**：用户主动说「给我草图」/「画三视图」才触发，AI 不自动生成。用 Matplotlib 输出正视图/侧视图/俯视图 PNG，用户确认后才进入建模。
+
 **3变体对比适用于所有场景（单部件 + 多部件）**：
 - 单部件：Step 1（需求分析）→ Step 2（策略）→ **Step 3（3变体 + OCP对比 + 用户选）**→ Step 4（导出）
 - 多部件：Phase 1（拆解）→ Phase 2（**每部件3变体**）→ Phase 3（装配脑图）→ Phase 4（仿真）
