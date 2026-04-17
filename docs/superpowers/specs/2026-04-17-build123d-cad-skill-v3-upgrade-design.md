@@ -293,9 +293,147 @@ python3 scripts/visual/annotate_reference.py <photo.png> --annotations FILE.json
 
 ---
 
-## 5. P2 详细设计：SKILL.md 局部瘦身（可选）
+## 5. 现实对齐（Real-world Alignment）⚠️ 核心补丁
 
-### 5.1 抽出内容表
+> **触发背景**：test 13 的参考图全部是 gsmarena 实拍、官网营销图、截屏保存——有复杂背景、透视畸变、光照阴影、3/4 角度。不是干净的正交视图。P0 工具链如果按"渲染图 vs 干净三视图"设计，**实战中第一天就会失效**。
+
+### 5.1 三条原则
+
+1. **视图名 = 部件语义**，不是世界坐标轴
+   FRONT = 屏幕面、BACK = 后盖面，不是 +Y 朝向。不同部件必须声明 `part_face_mapping`，否则 multi_view_screenshot.py 出来的图不能和参考图对齐。
+
+2. **参考图先预处理**，再进入 visual_compare
+   参考图是实拍 → 必须裁掉背景、记录像素 bbox、标比例尺。test 13 的 `x_ph, y_ph, w_ph, h_ph = 72, 50, 385, 1063` + `PHONE_L=160.26mm` 就是这个模式。
+
+3. **渲染图要向参考图靠**，而不是反过来
+   参考图是给定的（官网/电商/拆机视频），不可控。渲染图是我们生成的，调整相机/光照/透视去匹配参考图的角度才是正确方向。
+
+### 5.2 参考图预处理流程（P0 新增必做）
+
+**位置**：Step R2 收集资料后、Step R4.5 视觉验证前
+
+```
+原始参考图（实拍，带背景）
+    │
+    ├──► 手动标 bbox 或自动前景分割
+    │     输出：{name}_cropped.png + {name}_bbox.json
+    │
+    ├──► 标比例尺（已知物理尺寸 → 像素长度）
+    │     输出：{name}_scale.json  {"mm_per_px": 0.418}
+    │
+    └──► 合成干净的对比底图（纯白背景 + 部件居中）
+          输出：{name}_clean.png
+                   │
+                   └──► 送入 visual_compare.py
+```
+
+**P0 新增脚本**：`scripts/visual/preprocess_reference.py`
+
+```bash
+python3 scripts/visual/preprocess_reference.py <photo.png> \
+    --bbox "72,50,385,1063" \
+    --physical-length "160.26mm" \
+    --physical-axis height \
+    --output-dir refs/clean/
+```
+
+**产出**：`{stem}_cropped.png`（去背景）、`{stem}_bbox.json`（坐标）、`{stem}_scale.json`（mm/px）
+
+### 5.3 视图语义映射（P0 新增必做）
+
+**每个部件目录必须声明 `part_face_mapping.yaml`**：
+
+```yaml
+# tests/14-xiaomi-k70-case/part_face_mapping.yaml
+part: phone_case
+coordinate_system:
+  up: +Z        # 手机长边
+  right: +X     # 手机短边
+  screen_normal: -Y  # 屏幕法线（朝人）
+
+face_mapping:
+  FRONT: screen_side      # 对应 Camera.BACK（因为屏幕法线 -Y）
+  BACK:  back_cover_side  # 对应 Camera.FRONT
+  LEFT:  left_edge
+  RIGHT: right_edge
+  TOP:   top_edge         # 听筒一侧
+  BOTTOM: bottom_edge     # 充电口一侧
+```
+
+`multi_view_screenshot.py` **必须**读这份 yaml，把部件语义视图映射到对应相机角度。**不读 yaml 时默认按坐标轴出图并警告**"视图名可能不等于参考图语义"。
+
+### 5.4 渲染图贴近参考图的三档
+
+| 档位 | 渲染参数 | 适合什么参考图 | 对齐难度 |
+|---|---|---|---|
+| 档 1：正交干净视图 | `Camera.FRONT` + 白背景 | 官方三视图 PNG | 低 |
+| 档 2：透视 3/4 角度 | `Camera.ISO` + 可调俯仰 | 营销主图、产品渲染图 | 中 |
+| 档 3：匹配实拍角度 | 手动相机角度 + 背景合成 | 电商实拍、拆机视频截帧 | 高 |
+
+**P0 只做档 1 + 档 2**。档 3 放到 P2 或独立 skill（cad-vision-verify）。
+
+`multi_view_screenshot.py` **新增** `--mode {ortho, iso, both}` 开关：
+- `ortho`：6 正交视图，适合档 1
+- `iso`：4 个 ISO 角度（前上、前下、后上、后下），适合档 2
+- `both`：10 张全套
+
+### 5.5 visual_compare.py 的参考图输入契约
+
+**修订 §3.3 的 CLI**：
+
+```bash
+# 旧接口（假设参考图已是干净视图）
+python3 scripts/visual/visual_compare.py <rendered.png> <reference.png>
+
+# 新接口（强制参考图带预处理元数据）
+python3 scripts/visual/visual_compare.py \
+    <rendered.png> \
+    <reference_clean.png> \
+    --reference-scale refs/clean/front_scale.json \
+    --rendered-scale "auto"  # 渲染图从 bbox 自动算
+```
+
+**比较前的自动归一化**：两边都按 mm/px 缩放到同一物理尺度，再做 edge overlay / IoU。否则 IoU 指标毫无意义。
+
+### 5.6 SKILL.md 现实对齐桥接段
+
+**位置**：Step R2 后，Step R3 前（在收集资料和反推之间）
+
+```markdown
+### Step R2.7 — 参考图现实对齐检查
+
+每张要用于 Layer 2 对比的参考图必须先走预处理：
+
+1. 判断图源：营销图/三视图/实拍/拆机截帧（不同精度）
+2. 跑 `preprocess_reference.py` 得到 cropped + scale json
+3. 为本部件写 `part_face_mapping.yaml` 声明视图语义
+4. 确定 visual_compare 使用档位（ortho / iso / 手动）
+
+未做预处理的参考图不得进入 Layer 2 对比——否则边缘 IoU 结果不可信。
+```
+
+### 5.7 为什么这一章是补丁，不是重构
+
+- **P0 工具链如果默认"参考图已经是干净正交视图"会直接失败**——实战中 90% 的参考图不是这样
+- **视图名语义**如果不固定，模型导航起来每个部件都要重新猜对应关系
+- **档 1/2/3** 分档让 P0 不需要解决"档 3 匹配实拍角度"这个难题（那个属于 cad-vision-verify 姊妹 skill）
+
+### 5.8 新增改动清单（插入到 §7 完整升级清单）
+
+| 优先级 | 新增/修改文件 | 改动量 |
+|---|---|---|
+| P0 | `scripts/visual/preprocess_reference.py` | 新增 ~180 行 |
+| P0 | `references/verify/part-face-mapping-template.yaml` | 新增 |
+| P0 | `references/verify/reference-image-preprocessing.md` | 新增 |
+| P0 | `visual_compare.py` 增加 scale 输入契约 | 改 ~40 行 |
+| P0 | `multi_view_screenshot.py` 增加 `--mode` + yaml 读取 | 改 ~60 行 |
+| P0 | SKILL.md Step R2.7 桥接段 | 新增 ~25 行 |
+
+---
+
+## 6. P2 详细设计：SKILL.md 局部瘦身（可选）
+
+### 6.1 抽出内容表
 
 | 当前位置（SKILL.md） | 行范围 | 目标位置 |
 |---|---|---|
@@ -304,7 +442,7 @@ python3 scripts/visual/annotate_reference.py <photo.png> --annotations FILE.json
 | RevoluteJoint 帧对齐陷阱 | L1298~1347（~50 行） | `references/parts/pitfalls.md` |
 | OCP Animation 关节路径规则 | L1349~1368（~20 行） | `references/parts/pitfalls.md` |
 
-### 5.2 SKILL.md 保留形式
+### 6.2 SKILL.md 保留形式
 
 Step 1.5 简化为触发词表 + 一句话描述 + 链接：
 
@@ -324,13 +462,13 @@ Step 1.5 简化为触发词表 + 一句话描述 + 链接：
 完整代码模板见 references/parts/geometric-alignment.md
 ```
 
-### 5.3 行数预估
+### 6.3 行数预估
 
 - 当前：1556 行
 - P2 后：~900 行
 - 降幅：~42%
 
-### 5.4 P2 的取舍风险
+### 6.4 P2 的取舍风险
 
 - ⚠️ SKILL.md 现在是一个整体文档，LLM 读起来流畅；拆开后 LLM 要多跳转 references 才能完整理解
 - ⚠️ 跳转成本 vs 加载成本：目前 1556 行仍在 context 可接受范围，做 P2 瘦身不是刚需
@@ -339,16 +477,16 @@ Step 1.5 简化为触发词表 + 一句话描述 + 链接：
 
 ---
 
-## 6. 风险 & 诚实边界
+## 7. 风险 & 诚实边界
 
-### 6.1 已识别风险
+### 7.1 已识别风险
 
 1. **P0 依赖运行中的 OCP Viewer**：无头 CI 环境跑不了，但 skill 本来就定位"人在环"工作流，可接受
 2. **P1 反推方法论只有 K80 Pro N=1 样本**：test 14/15 完成后应回顾方法论并补充案例
 3. **P0 判定阈值是第一版**：IoU ≥ 0.85 / 偏差 ≤ 2% 等数值需积累更多实测后复核
 4. **P2 可能降低 LLM 阅读连贯性**：建议延后决策
 
-### 6.2 非目标
+### 7.2 非目标
 
 - 不做完全无头渲染（需要 VTK/matplotlib-3d 新依赖，违反零依赖原则）
 - 不实现 cad-vision-verify 姊妹 skill（有独立设计文档）
@@ -356,7 +494,7 @@ Step 1.5 简化为触发词表 + 一句话描述 + 链接：
 
 ---
 
-## 7. 完整升级清单
+## 8. 完整升级清单
 
 | 优先级 | 新增/修改文件 | 改动量 |
 |---|---|---|
@@ -377,7 +515,7 @@ Step 1.5 简化为触发词表 + 一句话描述 + 链接：
 
 ---
 
-## 8. 实施顺序建议
+## 9. 实施顺序建议
 
 1. **先做 P0 的 4 个脚本**（核心收益，改动隔离）
 2. **并行做 P0 的两份 references**
@@ -388,16 +526,17 @@ Step 1.5 简化为触发词表 + 一句话描述 + 链接：
 
 ---
 
-## 9. 验收标准
+## 10. 验收标准
 
 - ✅ 在 test 14（K70）目录下可直接调用 P0 工具链生成 7 视图 + skybox + 对比图，不需要再写一次性脚本
 - ✅ P1 references 文档能直接指导"只有照片没有 STEP"场景的下一个参考物建模
 - ✅ SKILL.md 的 Step R2.5 和 Layer 2 桥接段能被 LLM 正确触发调用对应工具
 - ✅ 所有新脚本在代码末尾都有 OCP 自动预览块（沿用 skill 现有规则）
+- ✅ 参考图来自实拍/营销图时，必须先跑 `preprocess_reference.py` 得到 cropped + scale；否则 `visual_compare` 拒绝执行并提示
 
 ---
 
-## 10. 参考资料
+## 11. 参考资料
 
 - test 13 实战产出：`/Users/liyijiang/work/build123d-cad-skill-test/tests/13-redmi-k80-pro/`
 - 现有 skill：`/Users/liyijiang/.agents/skills/build123d-cad/SKILL.md`（1556 行）
