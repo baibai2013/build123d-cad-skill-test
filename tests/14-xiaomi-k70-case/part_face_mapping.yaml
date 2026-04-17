@@ -1,0 +1,20 @@
+part: xiaomi_k70_case
+description: Xiaomi K70 phone case — 屏幕朝 -Y，头部朝 +Z，按键朝 +X
+coordinate_system:
+  up: "+Z"
+  right: "+X"
+  screen_normal: "-Y"
+face_mapping:
+  FRONT: BACK       # 屏幕面：法线 -Y → Camera.BACK
+  BACK:  FRONT      # 后盖面：法线 +Y → Camera.FRONT
+  LEFT:  LEFT
+  RIGHT: RIGHT
+  TOP:   TOP
+  BOTTOM: BOTTOM
+face_labels:
+  FRONT:  "屏幕面（装手机后朝向用户）"
+  BACK:   "背面（壳外侧）"
+  LEFT:   "左侧边（音量键侧）"
+  RIGHT:  "右侧边（电源键侧）"
+  TOP:    "顶部（听筒一侧）"
+  BOTTOM: "底部（充电口一侧）"
