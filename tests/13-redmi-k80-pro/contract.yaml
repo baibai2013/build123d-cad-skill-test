@@ -1,0 +1,184 @@
+# ===== Layer 0 Parameter Contract =====
+# Product: Redmi K80 Pro Phone Case (FDM 3D Printing)
+# Source: references/redmi-k80-pro/params.md
+
+version: "0.1"
+
+meta:
+  product: "Redmi K80 Pro Case"
+  type: phone_case
+  body_ref:
+    L: 160.26    # length mm (Y axis)
+    W: 74.95     # width mm (X axis)
+    T: 8.39      # thickness mm (Z axis)
+  coord:
+    X: width
+    Y: length
+    Z: thickness
+    origin: body_center
+  source: "references/redmi-k80-pro/params.md"
+
+globals:
+  wall_t: {val: 1.5, unit: mm}
+  gap: {val: 0.3, unit: mm}
+  lip_h: {val: 1.5, unit: mm}
+  hole_margin: {val: 0.5, unit: mm}
+
+features:
+  # ────────── F1: 圆形摄像头开孔 / Circular camera cutout ──────────
+  # K80 Pro 「风暴眼」圆形模组，与 K70 的方形模组不同
+  # 照片提取: CAM_D=35.5→35, CAM_CX=13.6→14, CAM_CY=59.5→60
+  - name: camera_cutout
+    type: circle
+    face: back
+    dims:
+      d: 36.0                # CAM_D(35) + 2×HOLE_MRG(0.5) = 36.0
+      _ratios:
+        d_over_W: 0.480      # 36.0 / 74.95
+    pos:
+      cx: 14.0               # 背面左偏（照片提取13.6→14）/ back-view left (photo: 13.6)
+      cy: 60.0               # 偏上（照片提取59.5→60）/ offset upward (photo: 59.5)
+      from_top: 20.13        # L/2 - cy = 80.13 - 60.0
+      from_left_back: 23.475 # W/2 - cx = 37.475 - 14.0 = 23.475（背面视角）
+    constraints:
+      - {type: on_face, value: back, locks: [Z]}
+      - {type: edge_dist, ref: top, value: 20.13, tol: 2.0, locks: [Y]}
+      - {type: offset, axis: X, value: 14.0, tol: 2.0, locks: [X]}
+      - {type: ratio, param: d_over_W, expected: 0.480, tol: 0.05}
+      - {type: ordering, axis: Y, sequence: [camera_cutout, volume_btn, power_btn]}
+
+  # ────────── F2: 闪光灯开孔 / Flash cutout ──────────
+  # 圆环右侧（背面3点钟方向），照片提取校正
+  # 照片提取: FLASH_DX=-29.2→-29, FLASH_DY=-2.0, FLASH_L=12.5→12, FLASH_W=4.6→4.5
+  - name: flash_cutout
+    type: slot
+    face: back
+    dims:
+      w: 13.0                # FLASH_L(12.0) + 2×HOLE_MRG = 13.0（X长边，横向）
+      h: 5.5                 # FLASH_W(4.5) + 2×HOLE_MRG = 5.5（Y短边）
+      end_r: 2.65
+    pos:
+      cx: -15.0              # CAM_CX(14) + FLASH_DX(-29) = -15.0（保护环外侧）
+      cy: 58.0               # CAM_CY(60) + FLASH_DY(-2.0) = 58.0
+      from_top: 22.13        # 80.13 - 58.0
+    constraints:
+      - {type: on_face, value: back, locks: [Z]}
+      - {type: edge_dist, ref: top, value: 22.13, tol: 3.0, locks: [Y]}
+      - {type: offset, axis: X, value: -15.0, tol: 3.0, locks: [X]}
+
+  # ────────── F3: 音量键开孔 / Volume button cutout ──────────
+  # 侧面照片校正: 音量键从摄像头下边缘附近开始
+  - name: volume_btn
+    type: rect
+    face: right
+    dims:
+      w: 24.0
+      h: 4.0
+      _ratios:
+        w_over_L: 0.150      # 24.0 / 160.26
+    pos:
+      from_top: 38.0         # side-photo corrected (was 55.0)
+    constraints:
+      - {type: on_face, value: right, locks: [X]}
+      - {type: edge_dist, ref: top, value: 38.0, tol: 3.0, locks: [Y]}
+      - {type: offset, axis: Z, value: side_center, locks: [Z]}
+      - {type: colinear, target: power_btn, axis: X, tol: 0.1}
+      - {type: inter_dist, target: power_btn, axis: Y, value: 3.0, tol: 5.0}
+
+  # ────────── F4: 电源键开孔 / Power button cutout ──────────
+  # 侧面照片校正: 电源键在音量键下方约3mm处
+  - name: power_btn
+    type: rect
+    face: right
+    dims:
+      w: 12.0
+      h: 4.0
+      _ratios:
+        w_over_L: 0.075      # 12.0 / 160.26
+    pos:
+      from_top: 65.0         # side-photo corrected (was 83.0)
+    constraints:
+      - {type: on_face, value: right, locks: [X]}
+      - {type: edge_dist, ref: top, value: 65.0, tol: 3.0, locks: [Y]}
+      - {type: offset, axis: Z, value: side_center, locks: [Z]}
+      - {type: same_face, target: volume_btn}
+
+  # ────────── F5: USB-C 开孔 / USB-C cutout ──────────
+  - name: usb_c
+    type: rect
+    face: bottom
+    dims:
+      w: 12.0
+      h: 5.0
+    pos:
+      cx: 0.0
+    constraints:
+      - {type: on_face, value: bottom, locks: [Y]}
+      - {type: centered, plane: XZ, locks: [X]}
+      - {type: offset, axis: Z, value: side_center, locks: [Z]}
+      - {type: ordering, axis: X, sequence: [sim_tray, usb_c, speaker]}
+
+  # ────────── F6: 扬声器开孔 / Speaker cutout ──────────
+  - name: speaker
+    type: rect
+    face: bottom
+    dims:
+      w: 16.0
+      h: 3.0
+    pos:
+      cx: 18.0
+    constraints:
+      - {type: on_face, value: bottom, locks: [Y]}
+      - {type: offset, axis: X, value: 18.0, tol: 3.0, locks: [X]}
+      - {type: offset, axis: Z, value: side_center, locks: [Z]}
+      - {type: symmetric_pair, target: sim_tray, plane: YZ, tol: 3.0}
+
+  # ────────── F7: SIM 卡槽开孔 / SIM tray cutout ──────────
+  - name: sim_tray
+    type: rect
+    face: bottom
+    dims:
+      w: 12.0
+      h: 2.5
+    pos:
+      cx: -18.0
+    constraints:
+      - {type: on_face, value: bottom, locks: [Y]}
+      - {type: offset, axis: X, value: -18.0, tol: 3.0, locks: [X]}
+      - {type: offset, axis: Z, value: side_center, locks: [Z]}
+      - {type: same_face, target: usb_c}
+
+# 参数映射 / Parameter mapping: contract ↔ code variables
+param_map:
+  camera_cutout.d: "CAM_D + 2*HOLE_MRG"       # 35 + 1.0 = 36.0
+  camera_cutout.cx: CAM_CX                     # 14.0
+  camera_cutout.cy: CAM_CY                     # 60.0
+  flash_cutout.cx: "CAM_CX + FLASH_DX"         # 14 + (-29) = -15.0
+  flash_cutout.cy: "CAM_CY + FLASH_DY"         # 60 + (-2) = 58.0
+  volume_btn.w: VOL_LEN
+  volume_btn.from_top: VOL_DY
+  power_btn.w: PWR_LEN
+  power_btn.from_top: PWR_DY
+  usb_c.w: USBC_W
+  usb_c.h: USBC_H
+  speaker.w: SPK_W
+  speaker.h: SPK_H
+  speaker.cx: SPK_CX
+  sim_tray.w: SIM_W
+  sim_tray.h: SIM_H
+  sim_tray.cx: SIM_CX
+
+# 变体覆盖 / Variant overrides
+variants:
+  V1_slim:
+    overrides:
+      globals.wall_t: 1.2
+      globals.lip_h: 1.0
+      globals.shell_r: 1.5
+  V2_standard: {}     # default values
+  V3_rugged:
+    overrides:
+      globals.wall_t: 2.0
+      globals.lip_h: 2.0
+      globals.shell_r: 3.0
+      globals.airbag: 1.0
