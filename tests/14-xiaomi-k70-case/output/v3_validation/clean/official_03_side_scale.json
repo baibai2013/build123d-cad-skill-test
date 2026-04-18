@@ -1,0 +1,6 @@
+{
+  "mm_per_px": 0.25848387096774195,
+  "physical_axis": "width",
+  "physical_length_mm": 160.26,
+  "reference_image": "output/v3_validation/clean/official_03_side_cropped.png"
+}
