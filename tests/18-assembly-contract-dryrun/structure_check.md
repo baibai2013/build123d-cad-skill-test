@@ -48,10 +48,11 @@ commit 待本次提交。
 
 | Scenario | 判据通过率 | 硬下限 | 结论 | 备注 |
 |---|---|---|---|---|
-| **J** 两关节机械臂 | 11/13 ✅ + 2/13 ⚠ | J-5/J-6/J-7/J-11 全 ✅ | **通过** | J-12/J-13 需覆盖 P3/P4 段，本次限定到 Step 2e 停下 |
-| **K** cross_refs 漏条 | 7/7 ✅ | K-3/K-4/K-6 全 ✅ | **通过** | FM-12 由用户提示触发（AI 未主动自察觉），判据注释允许 |
+| **J** 两关节机械臂 P1~Step2e | 11/13 ✅ + 2/13 ⚠ | J-5/J-6/J-7/J-11 全 ✅ | **通过** | J-12/J-13 在续跑 `run_J_p3p4.md` 中覆盖 |
+| **J 续跑** P3 + P4 | 8/8 ✅ | J-12/J-13/J-16/J-17 全 ✅ | **通过** | `joint_to_crossref.md` + Step 4.3 Stage C 两新契约点均履行 |
+| **K** cross_refs 漏条 | 7/7 ✅ | K-3/K-4/K-6 全 ✅ | **通过** | FM-12 由用户提示触发（已回写 Step 2e.c 自检清单修复） |
 
-详细判据 + 完整 AI 回复见 `run_J.md` / `run_K.md`。
+合并 J + J 续跑 = 19/19 ✅。详细判据 + 完整 AI 回复见 `run_J.md` / `run_J_p3p4.md` / `run_K.md`。
 
 **发现的改进点（非阻断，可纳入后续）**：
 - K-3 AI 未主动自察觉漏条，需用户提示才触发 FM-12 → 建议 Step 2e.c 加自检清单"cross_refs 数量 ≥ P1 拆解装配关系数"
@@ -66,7 +67,8 @@ commit 待本次提交。
 ## 结论
 
 - 结构核对 12/12 全通过 ✅
-- 行为验证 Scenario J/K 全通过 ✅（子代理模拟，硬下限全绿）
+- 行为验证 Scenario J (P1~Step2e + P3/P4) + K 合计 19/19 + 7/7 全通过 ✅（子代理模拟，硬下限全绿）
+- FM-12 改进已回写 Step 2e.c 自检清单（commit f358aa0）
 - 回归验证（test 13/14）待用户在新会话手工跑
 
-多部件 assembly_contract + bbox 预检方案 **Layer 0 dry-run 通过**，可推进 push remote。
+多部件 assembly_contract + bbox 预检方案 **Layer 0 dry-run + 全段行为验证通过**，可推进 push remote。
