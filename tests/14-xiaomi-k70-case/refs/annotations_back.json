@@ -1,0 +1,18 @@
+{
+  "scale": {"pixels": 620, "mm": 160.26},
+  "origin": [310, 130],
+  "features": [
+    {
+      "name": "camera_module",
+      "center_px": [155, 60],
+      "size_mm": [38, 38],
+      "confidence": 4
+    },
+    {
+      "name": "power_button_candidate",
+      "center_px": [100, 60],
+      "size_mm": [6, 20],
+      "confidence": 2
+    }
+  ]
+}
