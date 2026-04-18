@@ -90,9 +90,10 @@ SKILL.md 当前 1419 行。根因三条：
 
 ### 3.3 SKILL.md 目标体量
 
-- 总行数 ≤ 300
+- 总行数 ≤ 1200（当前 1419 → 目标减 220 行以上，主要来自删除三大流程段）
 - `grep "^### Step \|^### Phase " SKILL.md` = 0 条
-- 保留：角色规则 12 条、准入序列、流程路由表、三个 4 行路由子段、OCP 预览标准模板、跨流程规则（角色规则 8~12 条里的验证/装配/工艺/仿真引导）
+- 保留：角色规则 12 条、准入序列、流程路由表、三个 4 行路由子段、OCP 预览标准模板、建模哲学 / API 速查 / 典型模板 / 验证方法 / 格式对照等跨流程参考知识（L366 之后原有内容）
+- 注：L366 之后的参考知识段是 skill 核心资产，本次不动（见 §9 Out of Scope）
 
 ## 4. Quote-back 机制
 
@@ -245,7 +246,7 @@ FM-9 Quote-back 伪造：AI 写了 Quote-back 但原文与 Playbook 实际不符
 
 ### 7.1 结构核对（自动可查）
 
-- `wc -l SKILL.md` ≤ 300
+- `wc -l SKILL.md` ≤ 1200（当前 1419，减 220 行以上）
 - `grep -n "^### Step \|^### Phase " SKILL.md` = 0
 - SKILL.md 头部含 `## AI 执行准入序列`
 - `ls references/protocols/` 含 README.md + 3 个 Playbook
@@ -304,7 +305,7 @@ FM-9 Quote-back 伪造：AI 写了 Quote-back 但原文与 Playbook 实际不符
 
 ## 10. 验收标准
 
-- SKILL.md ≤ 300 行，grep 7 项结构核对全通过
+- SKILL.md ≤ 1200 行（减 220+），grep 7 项结构核对全通过
 - `references/protocols/` 含 README + 3 个 Playbook，每个 Playbook 顶部契约 7 条
 - `references/INDEX.md` 存在且含 3 节
 - 每个 Playbook 每个 Step / Phase 回报示例首行含 Quote-back 示范
