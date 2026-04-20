@@ -89,8 +89,10 @@ Playbook 中每个 `[halt-for-user]` 硬字段是**绝对暂停点**，必须同
 | Playbook | 编号 | 位置 |
 |---|---|---|
 | reference-product-playbook | **FM-10** | 常见失败模式末尾（FM-9 之后） |
-| single-part-playbook | **FM-5** | 常见失败模式末尾（FM-4 之后） |
+| single-part-playbook | **FM-1** | 常见失败模式段（原文件模板占位，本设计填充为越权通过确认门）※ |
 | multi-part-playbook | **FM-13** | 常见失败模式末尾（FM-12 之后） |
+
+※ v1.1 修订：spec 原为 FM-5，但 single-part-playbook.md 原文件「常见失败模式」段只存在 FM-1 的占位，不存在 FM-2~FM-4。为避免编号断层，实施阶段将 FM-5 落到 FM-1（替换原占位条目）。详见 §11 Changelog。
 
 ---
 
@@ -251,7 +253,7 @@ tests/19-hard-halt-dryrun/
 | 1 | `grep -c "确认门执行契约" SKILL.md` | ≥ 1（新章节） |
 | 2 | `grep -c "halt-for-user" SKILL.md` | ≥ 3（新章节内） |
 | 3 | `grep -c "FM-10" reference-product-playbook.md` | ≥ 2（契约第 8 条 + FM 详细） |
-| 4 | `grep -c "FM-5" single-part-playbook.md` | ≥ 2 |
+| 4 | `grep -cE "FM-1([^0-9]\|$)" single-part-playbook.md` | ≥ 2 ※ v1.1 修订：原 FM-5 → FM-1 |
 | 5 | `grep -c "FM-13" multi-part-playbook.md` | ≥ 2 |
 | 6 | `grep -c "halt-for-user" multi-part-playbook.md` | ≥ 3（6 处 halt 位置） |
 | 7 | `grep -c "halt-for-user" single-part-playbook.md` | ≥ 2 |
@@ -302,3 +304,15 @@ tests/19-hard-halt-dryrun/
 - spec 批准 → 进 writing-plans
 - plan 批准 → 执行（预计 1 天完成 skill 仓改动 + tests/19 落地）
 - 验收 PASS → commit + push + 通告用户在新会话跑回归
+
+---
+
+## 11. Changelog
+
+### v1.1 — 2026-04-20
+- §2.4 / §6.1 修订：single-part-playbook 确认门违规 FM 编号由原 **FM-5** → **FM-1**。
+  原因：实施阶段检视 `references/protocols/single-part-playbook.md` 「常见失败模式」段，发现只存在 FM-1 的占位条目，不存在 FM-2~FM-4；为避免编号断层，把本设计新增的「越权通过确认门」落到 FM-1 上替换占位，其余 2 个 Playbook（reference-product→FM-10、multi-part→FM-13）按原 spec 编号不变。
+- 行为验证 Scenario L 判据 L-3 实际为 ⚠（契约合规的显式 `[skip] S2 真实草图` reason="S1 未关闭不得跨 Step"）而非纯 ✅；合计 19/20 ✅ + 1 ⚠，硬下限 11/11 全 ✅ 仍达标。详见 `tests/19-hard-halt-dryrun/structure_check.md`。
+
+### v1.0 — 2026-04-18
+- 初版 spec，brainstorming 批准并 commit（8a27c03）。
