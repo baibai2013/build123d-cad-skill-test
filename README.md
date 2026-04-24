@@ -15,6 +15,7 @@ build123d CAD Skill 的测试用例集合，验证各种建模操作和 OCP View
 ```bash
 cd tests/01-enclosure-box && python enclosure_box.py
 cd tests/02-spur-gear && python gear_test.py
+cd tests/20-ball-joint && python ball_joint.py
 ```
 
 输出文件生成在各测试目录的 `output/` 下。
@@ -175,31 +176,116 @@ cd tests/02-spur-gear && python gear_test.py
 
 **涉及 API**：`Polyline`, `make_face`, `fillet(vertices)`, `ThreePointArc`, `RevoluteJoint`, `RigidJoint`, `connect_to`, `Compound`, `PolarLocations`, `Hole`, `Animation`, `add_track`, `save_screenshot`, `export_step`
 
-#### 13-ball-joint — 球铰万向节
+#### 20-ball-joint — 球铰万向节（BallJoint 3 DOF）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| BallJoint 3 DOF 连接 | :x: | 球铰 angular_range 三轴 |
-| RigidJoint + BallJoint 对接 | :x: | 底座固定 + 头部万向 |
+| BallJoint 3 DOF 连接 | :white_check_mark: | `angular_range=((-45,45),(-45,45),(0,360))` |
+| RigidJoint + BallJoint 对接 | :white_check_mark: | 底座 RigidJoint 锚点 + 球铰臂 BallJoint |
+| 球碗底座（Box + 半球形凹穴） | :white_check_mark: | 40×40×15mm，cup_r=10mm，fillet 竖边 R3 |
+| 球铰臂（Sphere + Cylinder 融合） | :white_check_mark: | ball_r=9mm，arm_r=4mm，arm_len=45mm，5mm 重叠保融合 |
+| 三姿态 connect_to 并排展示 | :white_check_mark: | 直立(0°) / X 倾斜 30° / X+Z 倾斜 30°+45° |
+| 三层验证（BRep/体积/STEP） | :white_check_mark: | 体积 socket≈21685mm³，ball_arm≈5087mm³，STEP 精度 ✅ |
+| OCP 三姿态并排预览 | :white_check_mark: | `render_joints=True`，端口自动探测 |
 
-**涉及 API**：`BallJoint`, `RigidJoint`, `connect_to`, `export_step`
+**涉及 API**：`BallJoint`, `RigidJoint`, `connect_to`, `Rotation`, `Sphere`, `Cylinder`, `Box`, `fillet`, `export_step`, `import_step`
 
 ---
 
-### 四、安装实战（Mounting）
+### 四、参考物建模（Reference Products）
 
-#### 14-servo-mount — SG90 舵机安装座
+#### 13-redmi-k80-pro — 红米 K80 Pro 外形参考模型
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| 舵机腔体（Box 减材料） | :x: | SG90 尺寸 23.2×12.5×22mm |
-| 耳片安装槽 | :x: | 舵机固定耳卡槽 |
-| 输出轴孔 + 线缆出口 | :x: | 顶面轴孔 + 侧面线缆口 |
-| 螺丝孔 | :x: | M2 安装孔 |
+| 参考图驱动尺寸反推（GSMArena × 3） | :white_check_mark: | R1 经验检索 + R2 多源交叉验证 |
+| params.md 参数合同 + contract.yaml | :white_check_mark: | Layer 0 YAML 合同生成，约束覆盖率 100% |
+| build123d 精建外形（圆角直板机身） | :white_check_mark: | 161×75×8mm，摄像头矩形岛、侧边曲面 |
+| Layer 1 验证（体积/bbox/BRep） | :white_check_mark: | 4 阶段流水线，自动修复循环 ≤3 轮 |
+| Layer 2 视觉比对（截图 + AI 对比） | :white_check_mark: | 多角度截图与参考图比对，偏差分析 |
+| extract_params.py 尺寸提取工具 | :white_check_mark: | 从图片自动提取 + 交叉验证参数 |
+| visual_compare.py 视觉比对工具 | :white_check_mark: | 4 种后端自动降级（AI → OpenCV → manual） |
 
-**涉及 API**：`Box`, `Hole`, `extrude(Mode.SUBTRACT)`, `fillet`, `export_step`
+**涉及 API**：`Box`, `fillet`, `offset(openings=)`, `Hole`, `extrude(Mode.SUBTRACT)`, `export_step`
 
-#### 15-pcb-enclosure — PCB 壳体（铜柱 + USB 开口 + 卡扣盖）
+#### 14-xiaomi-k70-case — 小米 K70 手机壳（FDM 3D 打印）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 手机壳参数化建模（FDM 工艺） | :white_check_mark: | K70 外形参数化，壁厚 1.5mm，镂空减重 |
+| part_face_mapping.yaml 面映射 | :white_check_mark: | 每个特征面与设计意图的映射记录 |
+| 相机孔 / 按键孔 / 充电口精确定位 | :white_check_mark: | 选择器定位，非硬编码坐标 |
+| 3D 打印工艺约束验证 | :white_check_mark: | 壁厚 ≥1.2mm，悬臂 ≤45°，公差 +0.3mm |
+| STEP 导出 + 重导入验证 | :white_check_mark: | 体积偏差 < 0.1% |
+
+**涉及 API**：`Box`, `offset(openings=)`, `Hole`, `extrude(Mode.SUBTRACT)`, `fillet`, `export_step`
+
+---
+
+### 五、Playbook & Skill 验证（Dry-run）
+
+> 本类测试均为**纯对话验证**——不跑 build123d 代码，只对照 Playbook 检查 AI 行为是否合规。
+
+#### 15-playbook-dryrun — Playbook R1~R5 行为回归
+
+| 场景 | 状态 | 验证点 |
+|------|------|--------|
+| Scenario A：完整 R1~R5（K70 壳） | :white_check_mark: | 8 个产出报告块，R2.7 不遗漏 |
+| Scenario B：有 STEP + 跳 Layer 2 | :white_check_mark: | R2.5/R2.7 显式 skip，6 个报告块 |
+| Scenario C：有 STEP + 要 Layer 2（陷阱） | :white_check_mark: | R2.5 skip + R2.7 执行，不混淆 |
+
+#### 16-experience-dryrun — Experience 经验缓存行为回归
+
+| 场景 | 状态 | 验证点 |
+|------|------|--------|
+| Scenario D：冷启动（无经验文件） | :white_check_mark: | R1 报 `[miss]`，R5 新建 experience 文件 |
+| Scenario E：精确命中 | :white_check_mark: | R1 报 `[hit]`，参数+坑注入正确 |
+| Scenario F：同类命中 | :white_check_mark: | R1 报 `[partial]`，作参考不直接复用 |
+
+#### 17-skill-optimization-dryrun — SKILL.md 去内容化 + Quote-back 强制
+
+| 场景 | 状态 | 验证点 |
+|------|------|--------|
+| Scenario G：参考物建模（R Playbook） | :white_check_mark: | AI Read Playbook，每 Step 首行有 Quote-back |
+| Scenario H：单部件建模（S Playbook） | :white_check_mark: | AI Read Playbook，不凭记忆走 |
+| Scenario I：多部件装配（P Playbook） | :white_check_mark: | AI Read Playbook，Phase 产出报告格式合规 |
+
+#### 18-assembly-contract-dryrun — 装配合同 + bbox 预检
+
+| 场景 | 状态 | 验证点 |
+|------|------|--------|
+| Scenario J：两关节机械臂（≥2 部件） | :white_check_mark: | Step 2e 产出 assembly_contract.yaml + precheck_bbox.md |
+| Scenario K：故意漏翻译 1 条装配关系 | :white_check_mark: | 触发 FM-12，cross_refs 覆盖不全被 catch |
+
+#### 19-hard-halt-dryrun — 确认门强制执行（halt-gate-enforcement）
+
+| 场景 | 状态 | 验证点 |
+|------|------|--------|
+| Scenario L：AI 越过 S2 草图确认门 | :white_check_mark: | 触发 FM-1，回补产出 + 重出 halt |
+| Scenario M：多部件 Phase 1 确认门 | :white_check_mark: | 触发 FM-13，halt 正确生效 |
+| Scenario N：参考物 R3.5 视觉确认门 | :white_check_mark: | 触发 FM-10，回补正确 |
+
+**结构核对**：10/10 全通过 ✅（SKILL.md §确认门执行契约 + 3 Playbook FM 条款）
+
+---
+
+### 七、安装实战（Mounting）
+
+#### 21-servo-mount — SG90 舵机安装座（extrude subtract-only + 精确腔体）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 舵机本体腔（从顶面向下切） | :white_check_mark: | SG90 标准尺寸 22.8×12.2×22.7mm，间隙 0.3mm，壁厚 2.5mm |
+| 耳片台阶槽（两侧开槽） | :white_check_mark: | 耳宽 32.2mm，耳厚 2.5mm，草图差集 `Rectangle - Rectangle` |
+| M2 攻丝孔（4 个） | :white_check_mark: | 孔距 27.6mm，从顶面穿入耳片，深 ear_t + 2mm |
+| 线缆出口（-X 侧面） | :white_check_mark: | 9×6mm 矩形出口，墙厚方向贯通 |
+| 底面 M3 固定孔（4 角） | :white_check_mark: | 安装座固定到机架，距外壁 5mm |
+| 外廓竖边圆角 | :white_check_mark: | R1.5mm，`fillet(filter_by(Axis.Z))` |
+| 三层验证（BRep/bbox/STEP） | :white_check_mark: | bbox 28.4×37.8×25.2mm，填充率 70.3%，STEP 精度 ✅ |
+
+**涉及 API**：`Box`, `Rectangle`, `extrude(Mode.SUBTRACT)`, `fillet`, `filter_by(Axis.Z)`, `export_step`, `import_step`
+
+#### pcb-enclosure — PCB 壳体（铜柱 + USB 开口 + 卡扣盖）（待开发）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -211,7 +297,7 @@ cd tests/02-spur-gear && python gear_test.py
 
 **涉及 API**：`Box`, `shell`, `GridLocations`, `Cylinder`, `Rectangle`, `extrude(Mode.SUBTRACT)`, `Pos`, `Compound`, `export_step`
 
-#### 16-sensor-bracket — 传感器支架（HC-SR04）
+#### sensor-bracket — 传感器支架（HC-SR04）（待开发）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -223,9 +309,9 @@ cd tests/02-spur-gear && python gear_test.py
 
 ---
 
-### 五、OCP 可视化（Viewer）
+### 八、OCP 可视化（Viewer）
 
-#### 17-show-params — show() 参数验证
+#### show-params — show() 参数验证（待开发）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -236,7 +322,7 @@ cd tests/02-spur-gear && python gear_test.py
 
 **涉及 API**：`show`, `Camera`, `colors`, `names`, `alphas`
 
-#### 18-animation-explode — 爆炸动画（Animation API）
+#### animation-explode — 爆炸动画（Animation API）（待开发）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -247,7 +333,7 @@ cd tests/02-spur-gear && python gear_test.py
 
 **涉及 API**：`Animation`, `add_track`, `animate`, `save_as_gif`
 
-#### 19-animation-joint — 多关节运动动画
+#### animation-joint — 多关节运动动画（待开发）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -257,7 +343,7 @@ cd tests/02-spur-gear && python gear_test.py
 
 **涉及 API**：`Animation`, `add_track("rz")`, `RevoluteJoint`, `show`
 
-#### 20-studio-material — PBR 材质渲染
+#### studio-material — PBR 材质渲染（待开发）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -269,7 +355,7 @@ cd tests/02-spur-gear && python gear_test.py
 
 ---
 
-### 六、制造工艺验证（Process）
+### 九、制造工艺验证（Process）
 
 #### 21-print-tolerance — 3D 打印公差测试件
 
@@ -294,7 +380,7 @@ cd tests/02-spur-gear && python gear_test.py
 
 ---
 
-### 七、运动仿真（Simulation）
+### 十、运动仿真（Simulation）
 
 #### 25-fk-leg-chain — FK 正运动学（DH 齐次变换 + OCP 可视化）
 
@@ -353,7 +439,7 @@ cd tests/02-spur-gear && python gear_test.py
 
 ---
 
-### 八、验证工具（Verification）
+### 十一、验证工具（Verification）
 
 #### 23-validate-geometry — 几何验证
 
@@ -385,13 +471,15 @@ cd tests/02-spur-gear && python gear_test.py
 |------|--------|--------|------|
 | 零件建模 | 7 | 0 | 7 |
 | 曲面建模 | 3 | 0 | 3 |
-| 关节装配 | 2 | 1 | 3 |
-| 安装实战 | 0 | 3 | 3 |
+| 关节装配 | 3 | 0 | 3 |
+| 参考物建模 | 2 | 0 | 2 |
+| Playbook/Skill 验证 | 5 | 0 | 5 |
+| 安装实战 | 1 | 2 | 3 |
 | OCP 可视化 | 0 | 4 | 4 |
 | 制造工艺 | 0 | 2 | 2 |
 | 运动仿真 | 0 | 5 | 5 |
 | 验证工具 | 0 | 2 | 2 |
-| **合计** | **12** | **17** | **29** |
+| **合计** | **21** | **15** | **36** |
 
 ---
 
@@ -420,23 +508,35 @@ build123d-cad-skill-test/
 │   ├── 10-sweep-twist/           # ✅ 扭转扫掠
 │   ├── 11-revolute-hinge/        # ✅ 旋转铰链
 │   ├── 12-quadruped-leg/         # ✅ 四足腿链
-│   ├── 13-ball-joint/            # ⬜ 球铰万向
-│   ├── 14-servo-mount/           # ⬜ 舵机座
-│   ├── 15-pcb-enclosure/         # ⬜ PCB 壳体
-│   ├── 16-sensor-bracket/        # ⬜ 传感器支架
-│   ├── 17-show-params/           # ⬜ show() 参数
-│   ├── 18-animation-explode/     # ⬜ 爆炸动画
-│   ├── 19-animation-joint/       # ⬜ 关节动画
-│   ├── 20-studio-material/       # ⬜ PBR 材质
-│   ├── 21-print-tolerance/       # ⬜ 打印公差
-│   ├── 22-laser-dxf/             # ⬜ 激光 DXF
-│   ├── 23-validate-geometry/     # ⬜ 几何验证
-│   ├── 24-export-formats/        # ⬜ 多格式导出
-│   ├── 25-fk-leg-chain/         # ⬜ FK 正运动学
-│   ├── 26-ik-single-leg/        # ⬜ IK 逆运动学
-│   ├── 27-workspace-cloud/      # ⬜ 工作空间点云
-│   ├── 28-gait-generator/       # ⬜ 步态生成器
-│   └── 29-urdf-export/          # ⬜ URDF 导出
+│   ├── 13-redmi-k80-pro/         # ✅ 参考物建模 — 红米 K80 Pro
+│   ├── 14-xiaomi-k70-case/       # ✅ 参考物建模 — K70 手机壳（FDM）
+│   ├── 15-playbook-dryrun/       # ✅ Playbook R1~R5 行为回归
+│   ├── 16-experience-dryrun/     # ✅ Experience 经验缓存行为回归
+│   ├── 17-skill-optimization-dryrun/ # ✅ SKILL.md 去内容化 + Quote-back
+│   ├── 18-assembly-contract-dryrun/  # ✅ 装配合同 + bbox 预检 dryrun
+│   ├── 19-hard-halt-dryrun/      # ✅ 确认门强制执行验证
+│   ├── 20-ball-joint/            # ✅ 球铰万向节（BallJoint 3 DOF）
+│   │   ├── ball_joint.py
+│   │   └── output/
+│   ├── 21-servo-mount/           # ✅ SG90 舵机安装座（subtract-only）
+│   │   ├── servo_mount.py
+│   │   └── output/
+│   ├── （待开发）pcb-enclosure/  # ⬜ PCB 壳体
+│   ├── （待开发）pcb-enclosure/  # ⬜ PCB 壳体
+│   ├── （待开发）sensor-bracket/ # ⬜ 传感器支架
+│   ├── （待开发）show-params/    # ⬜ show() 参数
+│   ├── （待开发）animation-explode/ # ⬜ 爆炸动画
+│   ├── （待开发）animation-joint/   # ⬜ 关节动画
+│   ├── （待开发）studio-material/   # ⬜ PBR 材质
+│   ├── （待开发）print-tolerance/   # ⬜ 打印公差
+│   ├── （待开发）laser-dxf/         # ⬜ 激光 DXF
+│   ├── （待开发）validate-geometry/ # ⬜ 几何验证
+│   ├── （待开发）export-formats/    # ⬜ 多格式导出
+│   ├── （待开发）fk-leg-chain/      # ⬜ FK 正运动学
+│   ├── （待开发）ik-single-leg/     # ⬜ IK 逆运动学
+│   ├── （待开发）workspace-cloud/   # ⬜ 工作空间点云
+│   ├── （待开发）gait-generator/    # ⬜ 步态生成器
+│   └── （待开发）urdf-export/       # ⬜ URDF 导出
 └── .claude/
     └── settings.local.json
 ```
