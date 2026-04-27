@@ -9,6 +9,29 @@ build123d CAD Skill 的测试用例集合，验证各种建模操作和 OCP View
 - cadquery-ocp
 - ocp-vscode（OCP CAD Viewer 扩展）
 - Pillow（GIF 生成）
+- [build123d-parts-lib](https://github.com/baibai2013/build123d-parts-lib)（标准件实体库，submodule 接入）
+
+## 初始化（含 parts-lib 拉取）
+
+```bash
+git clone <this-repo>
+cd build123d-cad-skill-test
+git submodule update --init --recursive      # 拉 parts-lib
+python3 -m venv .venv && source .venv/bin/activate
+pip install build123d ocp-vscode pillow
+pip install -e lib/parts-lib                 # editable 装 parts-lib
+```
+
+**parts-lib 使用示例**：
+
+```python
+from build123d_parts_lib.parts.servos.sg90            import make_sg90
+from build123d_parts_lib.parts.fasteners.m3_iso4762   import make_m3_screw
+from build123d_parts_lib.modules.threaded_insert_boss import make_m3_boss
+from build123d_parts_lib.generators.clearance         import get_clearance_diameter
+```
+
+> **工作规则**：标件优先从 parts-lib 导入；新的通用标件通过 OCP 验证后沉淀回 parts-lib。
 
 ## 运行测试
 
@@ -511,9 +534,9 @@ cd tests/22-esp32-s3-devkitc-enclosure && python esp32_s3_enclosure_exploded.py
 ```
 build123d-cad-skill-test/
 ├── README.md
-├── .gitignore
-├── .vscode/
-│   └── settings.json             # Pylance 类型检查配置
+├── lib/
+│   └── parts-lib/                # ← git submodule，baibai2013/build123d-parts-lib
+│                                 #   pip install -e 后可 from build123d_parts_lib.* import
 ├── tests/
 │   ├── 01-enclosure-box/         # ✅ 外壳盒
 │   │   ├── enclosure_box.py
@@ -565,6 +588,7 @@ build123d-cad-skill-test/
 │   ├── （待开发）workspace-cloud/   # ⬜ 工作空间点云
 │   ├── （待开发）gait-generator/    # ⬜ 步态生成器
 │   └── （待开发）urdf-export/       # ⬜ URDF 导出
-└── .claude/
-    └── settings.local.json
+├── docs/                           # 设计方案与实施计划
+├── references/                     # skill 参考资料的本地快照/快测
+└── generated/                      # 工具脚本临时产物
 ```
