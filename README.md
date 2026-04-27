@@ -16,6 +16,8 @@ build123d CAD Skill 的测试用例集合，验证各种建模操作和 OCP View
 cd tests/01-enclosure-box && python enclosure_box.py
 cd tests/02-spur-gear && python gear_test.py
 cd tests/20-ball-joint && python ball_joint.py
+cd tests/22-esp32-s3-devkitc-enclosure && python esp32_s3_enclosure.py
+cd tests/22-esp32-s3-devkitc-enclosure && python esp32_s3_enclosure_exploded.py
 ```
 
 输出文件生成在各测试目录的 `output/` 下。
@@ -285,11 +287,32 @@ cd tests/20-ball-joint && python ball_joint.py
 
 **涉及 API**：`Box`, `Rectangle`, `extrude(Mode.SUBTRACT)`, `fillet`, `filter_by(Axis.Z)`, `export_step`, `import_step`
 
-#### pcb-enclosure — PCB 壳体（铜柱 + USB 开口 + 卡扣盖）（待开发）
+#### 22-esp32-s3-devkitc-enclosure — ESP32-S3-DevKitC-1 开发板外壳（参考物建模 + 2 部件 snap-fit）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
-| Box + shell 抽壳 | :x: | PCB 尺寸反推壳体内腔 |
+| 官方 DXF 机械图反推 PCB 尺寸 | :white_check_mark: | 62.74×25.40×1.6mm，无安装孔（社区流传错误），2×Micro-USB（非 USB-C） |
+| 坐标契约（pcb_origin_world）| :white_check_mark: | PCB 本地→世界坐标 Location 变换，消灭硬编码派生坐标 |
+| 底壳 + 盖板夹持方案 | :white_check_mark: | 4 角低台（高 4mm）+ 盖板压舌（凸 0.5mm）夹 PCB，无需螺孔 |
+| `offset` 抽壳（shell 替代） | :white_check_mark: | 盖板 `offset(amount=-lid_t, openings=bottom_face)` |
+| 2 × USB 胶囊开孔 | :white_check_mark: | `SlotOverall(10, 5, rotation=90)` USB-C 视觉，派生自 J2(6.00,3.66) + J4(19.40,3.66) |
+| Boot/Reset 按键压柱 | :white_check_mark: | 3mm 柔性突柱，派生自 SW1(6.76,13.79) + SW2(17.17,13.92) |
+| RGB LED 透光孔 + 3 条散热槽 | :white_check_mark: | LED d=3.5mm (5.08,31.60)，顶板散热 2×20mm×3 |
+| Snap-fit 卡扣（左右短边）| :white_check_mark: | 悬臂 6mm + 头厚 0.8mm + 导角 0.4mm |
+| **底面 4 × M3 固定孔** | :white_check_mark: | 1.6mm 半径，位置 (±22, ±10) 避开 4 角低台 |
+| Layer 0 参数合同 + 静态检查 | :white_check_mark: | 9 features / 47 constraints / 0 conflicts |
+| 三层验证（BRep/体积/STEP） | :white_check_mark: | 底壳 6248mm³ / 盖板 7196mm³ / STEP 精度 0.0000% |
+| 2 部件装配 + 爆炸动画 GIF | :white_check_mark: | 3 层（bottom / PCB+模块一体 / lid）16s 循环，160 帧@10fps |
+
+**涉及 API**：`Box`, `Cylinder`, `SlotOverall(rotation=90)`, `Circle`, `offset(openings=)`, `extrude(Mode.SUBTRACT)`, `BuildSketch(face)`, `fillet`, `import_step`, `Location`, `Compound`, `Animation.add_track`, `animation.set_relative_time`
+
+**Dave Cowden review 沉淀**：params.md + contract.yaml 经 2 轮 review：修正 body_ref 自循环、加坐标契约节、盖板净空按"焊/不焊排针"分裂、删冗余派生参数、snap-fit 补悬臂长度
+
+#### pcb-enclosure — PCB 壳体（带螺孔版，待开发）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| Box + shell 抽壳 | :x: | 适用于含 M2.5 安装孔的 PCB |
 | M2.5 铜柱（GridLocations） | :x: | 4 角铜柱对齐 PCB 安装孔 |
 | USB-C 接口开口 | :x: | 侧面减材料，定位到 PCB 高度 |
 | 散热通风槽 | :x: | 底面/侧面条形开口 |
@@ -472,14 +495,14 @@ cd tests/20-ball-joint && python ball_joint.py
 | 零件建模 | 7 | 0 | 7 |
 | 曲面建模 | 3 | 0 | 3 |
 | 关节装配 | 3 | 0 | 3 |
-| 参考物建模 | 2 | 0 | 2 |
+| 参考物建模 | 3 | 0 | 3 |
 | Playbook/Skill 验证 | 5 | 0 | 5 |
-| 安装实战 | 1 | 2 | 3 |
+| 安装实战 | 2 | 2 | 4 |
 | OCP 可视化 | 0 | 4 | 4 |
 | 制造工艺 | 0 | 2 | 2 |
 | 运动仿真 | 0 | 5 | 5 |
 | 验证工具 | 0 | 2 | 2 |
-| **合计** | **21** | **15** | **36** |
+| **合计** | **23** | **15** | **38** |
 
 ---
 
@@ -521,7 +544,12 @@ build123d-cad-skill-test/
 │   ├── 21-servo-mount/           # ✅ SG90 舵机安装座（subtract-only）
 │   │   ├── servo_mount.py
 │   │   └── output/
-│   ├── （待开发）pcb-enclosure/  # ⬜ PCB 壳体
+│   ├── 22-esp32-s3-devkitc-enclosure/  # ✅ ESP32-S3 开发板外壳（参考物 + 2 部件 snap-fit）
+│   │   ├── esp32_s3_enclosure.py        # 主建模（底壳 + 盖板）
+│   │   ├── esp32_s3_enclosure_exploded.py  # 爆炸动画 + GIF
+│   │   ├── contract.yaml                # Layer 0 参数合同
+│   │   └── output/                      # STEP × 3 + exploded_explode.gif
+│   ├── （待开发）pcb-enclosure/  # ⬜ PCB 壳体（带螺孔版）
 │   ├── （待开发）pcb-enclosure/  # ⬜ PCB 壳体
 │   ├── （待开发）sensor-bracket/ # ⬜ 传感器支架
 │   ├── （待开发）show-params/    # ⬜ show() 参数

@@ -1,0 +1,259 @@
+# ===== Layer 0 Parameter Contract =====
+# Product: ESP32-S3-DevKitC-1 Enclosure (FDM 3D Printing)
+# Source: references/esp32-s3-devkitc-1/params.md
+# 设计方案：2 部件（bottom shell + top lid）+ snap-fit，PCB 盖板夹持保持
+
+version: "0.1"
+
+meta:
+  product: "ESP32-S3-DevKitC-1 Enclosure"
+  type: enclosure
+  # body_ref = PCB 本体（外部约束/不可更改事实，外壳是派生物）
+  # Dave review Q3 修正：不再把外壳当 body_ref（自循环），以 PCB 为因果基准
+  body_ref:
+    L: 62.74        # PCB 长（X 方向）
+    W: 25.40        # PCB 宽（Y 方向）
+    T: 1.60         # PCB 厚（Z 方向）
+  # shell_derived = 外壳外包围盒（设计产物，非参考）
+  # 若改 wall_t/gap/pcb_standoff/lid_clearance，这里需同步更新
+  shell_derived:
+    L: 67.54        # = PCB_L + 2×(wall+gap) = 62.74 + 2×2.4
+    W: 30.20        # = PCB_W + 2×(wall+gap) = 25.40 + 2×2.4
+    T: 18.60        # = base_t + pcb_standoff + PCB_T + lid_clearance + lid_t = 2+4+1.6+9+2
+  coord:
+    X: length       # X = 长边方向（与 PCB 长边对齐）
+    Y: width        # Y = 短边方向（与 PCB 短边对齐）
+    Z: thickness    # Z = 垂直方向
+    origin: shell_center  # 外壳外包围盒几何中心（= PCB 中心投影）
+  source: "references/esp32-s3-devkitc-1/params.md"
+
+# ⚠️ 派生坐标同步警告（Dave review Q1）
+# 下方 features 中的 cx/cy 数字由 anchors.pcb_origin_world + PCB 本地坐标推算得出。
+# 若改动 wall_t/gap/pcb_standoff/lid_clearance 中任一，需手动同步更新:
+#   - anchors.pcb_origin_world（主锚）
+#   - 所有 feature.pos.cx/cy/cz（派生）
+# 目前无自动同步机制，靠注释约束。
+
+# ── 全局参数 ──
+globals:
+  wall_t:         {val: 2.0, unit: mm}
+  base_t:         {val: 2.0, unit: mm}
+  lid_t:          {val: 2.0, unit: mm}
+  gap:            {val: 0.4, unit: mm}
+  pcb_standoff:   {val: 4.0, unit: mm}
+  lid_clearance:  {val: 9.0, unit: mm}
+
+# ── PCB 本地锚点（不变量，派生世界坐标用）──
+anchors:
+  pcb_origin_world:
+    # PCB 本地 (0,0) 在世界坐标系中的位置
+    x: -31.37     # -PCB_L/2 = -62.74/2
+    y: -12.70     # -PCB_W/2 = -25.40/2
+    z: -3.30      # -T/2 + base_t + pcb_standoff = -9.30 + 2.0 + 4.0
+  pcb_top_z: -1.70   # pcb_origin_z + PCB_T = -3.30 + 1.60
+
+# ── 特征清单 ──
+features:
+
+  # ────────── F1: PCB 容纳腔（底壳内凹槽）──────────
+  - name: pcb_pocket
+    type: rect
+    face: bottom_inside     # 底壳内底面
+    dims:
+      w: 63.54              # PCB_L + 2×gap = 62.74 + 0.8
+      h: 26.20              # PCB_W + 2×gap = 25.40 + 0.8
+      depth_below_top: 1.60 # 从 PCB 顶面向下（= PCB 厚度）
+    pos:
+      cx: 0.0               # 沿 X 居中
+      cy: 0.0               # 沿 Y 居中
+      z_top: -1.70          # PCB 顶面 Z（= anchors.pcb_top_z）
+    constraints:
+      - {type: centered, plane: YZ, locks: [X]}
+      - {type: centered, plane: XZ, locks: [Y]}
+      - {type: offset, axis: Z, value: -1.70, tol: 0.3, locks: [Z]}
+      - {type: size, axis: X, value: 63.54, tol: 0.2}
+      - {type: size, axis: Y, value: 26.20, tol: 0.2}
+
+  # ────────── F2: USB-to-UART 口开孔（J2）──────────
+  - name: usb_uart_cutout
+    type: rect
+    face: front             # Y = -W/2 面
+    dims:
+      w: 10.0               # 连接器 8.22 + 2×0.9 余量
+      h: 6.5                # 连接器 5.27 + 2×0.6 余量
+    pos:
+      # 派生自 pcb_origin + J2 本地 (6.00, 3.66)
+      # cx = pcb_origin.x + J2.x = -31.37 + 6.00 = -25.37
+      cx: -25.37
+      cz: -0.20             # 连接器中心 Z = pcb_top_z + 1.5 = -0.20
+    constraints:
+      - {type: on_face, value: front, locks: [Y]}
+      - {type: offset, axis: X, value: -25.37, tol: 0.3, locks: [X]}
+      - {type: offset, axis: Z, value: -0.20, tol: 0.3, locks: [Z]}
+      - {type: size, axis: X, value: 10.0, tol: 0.2}
+      - {type: size, axis: Z, value: 6.5, tol: 0.2}
+      - {type: inter_dist, target: usb_otg_cutout, axis: X, value: 13.40, tol: 0.3}
+
+  # ────────── F3: USB OTG 口开孔（J4）──────────
+  - name: usb_otg_cutout
+    type: rect
+    face: front
+    dims:
+      w: 10.0
+      h: 6.5
+    pos:
+      # 派生自 pcb_origin + J4 本地 (19.40, 3.66)
+      # cx = -31.37 + 19.40 = -11.97
+      cx: -11.97
+      cz: -0.20
+    constraints:
+      - {type: on_face, value: front, locks: [Y]}
+      - {type: offset, axis: X, value: -11.97, tol: 0.3, locks: [X]}
+      - {type: offset, axis: Z, value: -0.20, tol: 0.3, locks: [Z]}
+      - {type: size, axis: X, value: 10.0, tol: 0.2}
+      - {type: size, axis: Z, value: 6.5, tol: 0.2}
+      - {type: colinear, target: usb_uart_cutout, axis: Y, tol: 0.1}
+
+  # ────────── F4: Boot 按键压柱（盖板朝下突出）──────────
+  - name: boot_plunger
+    type: circle
+    face: top_inside        # 盖板内底面
+    dims:
+      d: 3.0
+      protrusion: 4.80      # 从盖板内底面向下 = lid_clearance - (PCB 上表面到按键顶) - 间隙 = 9.0 - 1.5 - 0.3 - 2.4...
+    pos:
+      # 派生自 pcb_origin + SW1 本地 (6.76, 13.79)
+      # cx = -31.37 + 6.76 = -24.61
+      # cy = -12.70 + 13.79 = 1.09
+      cx: -24.61
+      cy: 1.09
+    constraints:
+      - {type: on_face, value: top_inside, locks: [Z]}
+      - {type: offset, axis: X, value: -24.61, tol: 0.3, locks: [X]}
+      - {type: offset, axis: Y, value: 1.09, tol: 0.3, locks: [Y]}
+      - {type: size, axis: diameter, value: 3.0, tol: 0.1}
+
+  # ────────── F5: Reset 按键压柱（盖板朝下突出）──────────
+  - name: reset_plunger
+    type: circle
+    face: top_inside
+    dims:
+      d: 3.0
+      protrusion: 4.80
+    pos:
+      # 派生自 pcb_origin + SW2 本地 (17.17, 13.92)
+      cx: -14.20            # -31.37 + 17.17
+      cy: 1.22              # -12.70 + 13.92
+    constraints:
+      - {type: on_face, value: top_inside, locks: [Z]}
+      - {type: offset, axis: X, value: -14.20, tol: 0.3, locks: [X]}
+      - {type: offset, axis: Y, value: 1.22, tol: 0.3, locks: [Y]}
+      - {type: size, axis: diameter, value: 3.0, tol: 0.1}
+      - {type: colinear, target: boot_plunger, axis: Y, tol: 0.2}
+
+  # ────────── F6: RGB LED 透光孔 ──────────
+  - name: led_window
+    type: circle
+    face: top               # 盖板外顶面
+    dims:
+      d: 3.5
+    pos:
+      # 派生自 pcb_origin + LED 本地 (5.08, 31.60)
+      cx: -26.29            # -31.37 + 5.08
+      cy: 18.90             # -12.70 + 31.60
+    constraints:
+      - {type: on_face, value: top, locks: [Z]}
+      - {type: offset, axis: X, value: -26.29, tol: 0.5, locks: [X]}
+      - {type: offset, axis: Y, value: 18.90, tol: 0.5, locks: [Y]}
+      - {type: size, axis: diameter, value: 3.5, tol: 0.1}
+
+  # ────────── F7: 散热槽（顶盖 3 条平行通风）──────────
+  - name: vent_slots
+    type: rect_array
+    face: top
+    dims:
+      w: 2.0                # 单条宽度
+      h: 20.0               # 单条长度
+      count: 3              # 数量
+      pitch: 4.0            # 中心间距
+    pos:
+      cx: 15.0              # 模块上方中心（避开 LED 区域）
+      cy: 0.0
+    constraints:
+      - {type: on_face, value: top, locks: [Z]}
+      - {type: offset, axis: X, value: 15.0, tol: 2.0, locks: [X]}
+      - {type: offset, axis: Y, value: 0.0, tol: 0.3, locks: [Y]}
+      - {type: size, axis: Y, value: 20.0, tol: 0.3}
+      - {type: array_count, value: 3}
+
+  # ────────── F8: 底壳 4 角 PCB 低台（夹持机构下半部）──────────
+  - name: corner_post
+    type: rect_array
+    face: bottom_inside
+    dims:
+      w: 3.0                # 低台边长
+      h: 3.0
+      count: 4              # 4 角
+      height: 4.0           # 低台高度 = pcb_standoff
+    pos:
+      # 4 角位置（派生自 PCB 4 角 + 内缩 1.5mm）
+      # PCB 本地 4 角: (0,0),(62.74,0),(0,25.40),(62.74,25.40)
+      # 内缩 1.5mm 后世界坐标:
+      #   (-29.87, -11.20), (+29.87, -11.20), (-29.87, +11.20), (+29.87, +11.20)
+      pattern: pcb_corners_inset
+      inset: 1.5
+      abs_x: 29.87          # 4 角 |X|
+      abs_y: 11.20          # 4 角 |Y|
+    constraints:
+      - {type: on_face, value: bottom_inside, locks: [Z]}
+      - {type: array_count, value: 4}
+      - {type: size, axis: Z, value: 4.0, tol: 0.2}
+      - {type: offset, axis: X, value: 29.87, tol: 0.3, locks: [X]}
+      - {type: offset, axis: Y, value: 11.20, tol: 0.3, locks: [Y]}
+      - {type: no_overlap_with, target: [usb_uart_cutout, usb_otg_cutout]}
+
+  # ────────── F9: 盖板 Snap-fit 卡扣（左右短边各 1 对）──────────
+  - name: snap_fit_clip
+    type: clip_array
+    face: lid_side          # 盖板侧壁（左右短边）
+    dims:
+      w: 6.0                # 卡扣宽度
+      cantilever_l: 6.0     # 悬臂长度
+      head_t: 0.8           # 卡扣头凸出量
+      chamfer: 0.4          # 导角
+      count: 2              # 左右各 1
+    pos:
+      # 卡扣位于盖板左右短边中部
+      face_sides: [left, right]   # X = ±L/2 两面
+      abs_x: 33.77          # |X| = L/2
+      cy: 0.0               # Y 居中
+      cz: -5.30             # 卡扣头 Z（距盖板底）
+    constraints:
+      - {type: on_face, value: lid_side, locks: [X]}
+      - {type: array_count, value: 2}
+      - {type: offset, axis: X, value: 33.77, tol: 0.2, locks: [X]}
+      - {type: offset, axis: Y, value: 0.0, tol: 0.3, locks: [Y]}
+      - {type: offset, axis: Z, value: -5.30, tol: 0.3, locks: [Z]}
+      - {type: size, axis: Y, value: 6.0, tol: 0.2}
+
+# ── 参数映射（合同字段 ↔ 代码变量名）──
+param_map:
+  meta.body_ref.L:           SHELL_L
+  meta.body_ref.W:           SHELL_W
+  meta.body_ref.T:           SHELL_T
+  globals.wall_t:            WALL_T
+  globals.base_t:            BASE_T
+  globals.lid_t:             LID_T
+  globals.gap:               GAP
+  globals.pcb_standoff:      PCB_STANDOFF
+  globals.lid_clearance:     LID_CLEARANCE
+  anchors.pcb_origin_world:  PCB_ORIGIN
+  pcb_pocket.dims.w:         POCKET_L
+  pcb_pocket.dims.h:         POCKET_W
+  usb_uart_cutout.pos.cx:    USB_UART_CX
+  usb_otg_cutout.pos.cx:     USB_OTG_CX
+  boot_plunger.pos:          BOOT_POS
+  reset_plunger.pos:         RESET_POS
+  led_window.pos:             LED_POS
+  corner_post.dims.height:   CORNER_POST_H
+  snap_fit_clip.dims.cantilever_l: CLIP_CANTILEVER
