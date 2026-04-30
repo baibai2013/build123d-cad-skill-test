@@ -1,3 +1,5 @@
+[English](README_EN.md) | 中文
+
 # build123d CAD Skill Test
 
 build123d CAD Skill 的测试用例集合，验证各种建模操作和 OCP Viewer 可视化功能。
@@ -592,3 +594,15 @@ build123d-cad-skill-test/
 ├── references/                     # skill 参考资料的本地快照/快测
 └── generated/                      # 工具脚本临时产物
 ```
+
+---
+
+## 免责声明
+
+本仓库为 build123d CAD Skill 的功能探索与验证测试集，以记录和学习为主要目的，所有内容按现状提供。测试结果及生成模型仅供参考，OCP 视觉验证作为辅助手段，建议结合具体需求进行独立评估。
+
+---
+
+## License / 许可
+
+Apache License 2.0 — 商业可用，含专利授权条款。详见 [LICENSE](LICENSE)。
