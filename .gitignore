@@ -17,3 +17,10 @@ Desktop.ini
 
 # Claude Code local settings
 .claude/settings.local.json
+.claude/
+
+# 测试产物(大二进制,脚本可复现,不入库)
+tests/**/output/
+tests/**/_verify/
+*.glb
+*.stl

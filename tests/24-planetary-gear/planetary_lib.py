@@ -87,3 +87,47 @@ def make_carrier(a_center, n_planet, face_width=10.0, hub_r=6.0, plate_t=4.0):
         pin = Cylinder(radius=2.2, height=plate_t * 1.1)
         plate = plate - pin.moved(Location((a_center * math.cos(ang), a_center * math.sin(ang), 0)))
     return plate
+
+
+def make_flange(outer_r, bore_r, n_bolt, bolt_r, bolt_circle_r, plate_t=5.0,
+                seat_r=0.0, seat_depth=0.0):
+    """法兰盘:圆盘 + 中心孔 + 一圈螺栓孔;可选 -z 面轴承座沉孔(承载轴承外圈)。
+    中心在原点、z 居中。seat_r>0 时在底面挖出深 seat_depth 的座孔。
+    """
+    plate = Cylinder(radius=outer_r, height=plate_t)
+    plate = plate - Cylinder(radius=bore_r, height=plate_t * 1.1)          # 中心通孔
+    with BuildPart() as holes:                                            # 螺栓孔环
+        with PolarLocations(bolt_circle_r, n_bolt):
+            Cylinder(radius=bolt_r, height=plate_t * 1.2)
+    plate = plate - holes.part
+    if seat_r > 0 and seat_depth > 0:                                     # 轴承座(底面沉孔)
+        seat = Cylinder(radius=seat_r, height=seat_depth,
+                        align=(Align.CENTER, Align.CENTER, Align.MIN))
+        plate = plate - seat.moved(Location((0, 0, -plate_t / 2)))
+    return plate
+
+
+def make_bearing(inner_bore_r, outer_r, width=6.0, race_t=1.6, n_ball=12, ball=True):
+    """简化滚动轴承:内圈环 + 外圈环 +(可选)一圈滚珠。中心在原点、z 居中。
+    滚珠并入内圈件(随内圈转)。返回 (inner_part, outer_part)。
+    """
+    inner = (Cylinder(radius=inner_bore_r + race_t, height=width)
+             - Cylinder(radius=inner_bore_r, height=width * 1.1))
+    outer = (Cylinder(radius=outer_r, height=width)
+             - Cylinder(radius=outer_r - race_t, height=width * 1.1))
+    if ball:
+        ball_circle_r = (inner_bore_r + race_t + outer_r - race_t) / 2     # 滚道中线
+        ball_r = max(0.1, (outer_r - race_t - inner_bore_r - race_t) / 2 * 0.9)
+        with BuildPart() as balls:
+            with PolarLocations(ball_circle_r, n_ball):
+                Sphere(ball_r)
+        inner = inner + balls.part
+    return inner, outer
+
+
+def make_shaft(shaft_r, length, bore_r=0.0):
+    """圆轴(实心或空心),沿 z 轴,中心在原点。URDF 靠关节 origin 摆位。"""
+    s = Cylinder(radius=shaft_r, height=length)
+    if bore_r > 0:
+        s = s - Cylinder(radius=bore_r, height=length * 1.1)
+    return s
