@@ -2,7 +2,20 @@
 
 # build123d CAD Skill Test
 
-build123d CAD Skill 的测试用例集合，验证各种建模操作和 OCP Viewer 可视化功能。
+build123d CAD Skill 的测试用例集合，用来验证参数化建模、装配、标准件复用、OCP Viewer 可视化、URDF/GLB 动画和 Skill 行为回归。
+
+当前仓库包含 **24 个已落地测试** 和 **15 个待开发场景**。已完成部分覆盖从基础零件、曲面、关节、参考物建模，到舵机安装座、ESP32-S3 外壳、四足 2-DOF 单腿、行星齿轮动画等综合案例。
+
+## 快速导航
+
+| 目标 | 推荐入口 |
+|------|----------|
+| 看基础 API 用法 | `tests/01-enclosure-box` ~ `tests/10-sweep-twist` |
+| 看装配 / 关节 / 动画 | `tests/11-revolute-hinge`, `tests/12-quadruped-leg`, `tests/20-ball-joint` |
+| 看 parts-lib 标件优先流程 | `tests/21-servo-mount`, `tests/23-quadruped-leg-2dof`, `tests/24-planetary-gear` |
+| 看参考物建模 + 参数合同 | `tests/13-redmi-k80-pro`, `tests/14-xiaomi-k70-case`, `tests/22-esp32-s3-devkitc-enclosure` |
+| 看 URDF / GLB 动画链路 | `tests/24-planetary-gear/planetary_anim_test.py`, `tests/24-planetary-gear/animated_material.py` |
+| 看 Skill 行为回归 | `tests/15-playbook-dryrun` ~ `tests/19-hard-halt-dryrun` |
 
 ## 环境要求
 
@@ -43,6 +56,9 @@ cd tests/02-spur-gear && python gear_test.py
 cd tests/20-ball-joint && python ball_joint.py
 cd tests/22-esp32-s3-devkitc-enclosure && python esp32_s3_enclosure.py
 cd tests/22-esp32-s3-devkitc-enclosure && python esp32_s3_enclosure_exploded.py
+cd tests/23-quadruped-leg-2dof && python quadruped_leg.py
+cd tests/24-planetary-gear && python planetary_test.py
+cd tests/24-planetary-gear && python planetary_anim_test.py
 ```
 
 输出文件生成在各测试目录的 `output/` 下。
@@ -333,6 +349,21 @@ cd tests/22-esp32-s3-devkitc-enclosure && python esp32_s3_enclosure_exploded.py
 
 **Dave Cowden review 沉淀**：params.md + contract.yaml 经 2 轮 review：修正 body_ref 自循环、加坐标契约节、盖板净空按"焊/不焊排针"分裂、删冗余派生参数、snap-fit 补悬臂长度
 
+#### 23-quadruped-leg-2dof — 四足机器人 2-DOF 单腿装配（parts-lib 优先）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| SG90 舵机 × 2 | :white_check_mark: | `make_sg90()` 标件导入，髋/膝双舵机布局 |
+| SG90 安装座 × 2 | :white_check_mark: | `make_sg90_bracket()`，wall_thickness=2.5mm，print_clearance=0.3mm |
+| 大腿 / 小腿连杆 | :white_check_mark: | `make_leg_segment()`，FEMUR_LEN=70mm，TIBIA_LEN=55mm |
+| 半球脚垫 | :white_check_mark: | `make_foot_cap()`，底部削平，脚杆柄长 6mm |
+| M3 螺丝可视化 | :white_check_mark: | parts-lib M3 螺丝用于髋支架固定展示 |
+| 直接变换装配 | :white_check_mark: | `Pos` / `Rot` 定位髋支架、股骨、膝支架、胫骨、脚垫 |
+| 三层验证 | :white_check_mark: | BRep 有效性、体积/bbox 范围、STEP 导出重导入偏差 < 0.1% |
+| OCP Viewer 预览 | :white_check_mark: | 多对象 names/colors 展示，自动探测 OCP 端口 |
+
+**涉及 API**：`Compound`, `Pos`, `Rot`, `Location`, `export_step`, `import_step`, `show`, `Camera`, parts-lib `make_sg90`, `make_sg90_bracket`, `make_leg_segment`, `make_foot_cap`, `make_m3_screw`
+
 #### pcb-enclosure — PCB 壳体（带螺孔版，待开发）
 
 | 功能 | 状态 | 说明 |
@@ -405,7 +436,7 @@ cd tests/22-esp32-s3-devkitc-enclosure && python esp32_s3_enclosure_exploded.py
 
 ### 九、制造工艺验证（Process）
 
-#### 21-print-tolerance — 3D 打印公差测试件
+#### print-tolerance — 3D 打印公差测试件（待开发）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -416,7 +447,7 @@ cd tests/22-esp32-s3-devkitc-enclosure && python esp32_s3_enclosure_exploded.py
 
 **涉及 API**：`Box`, `Cylinder`, `shell`, `export_stl`, `linear_tolerance`, `angular_tolerance`
 
-#### 22-laser-dxf — 激光切割 DXF 导出
+#### laser-dxf — 激光切割 DXF 导出（待开发）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -430,7 +461,7 @@ cd tests/22-esp32-s3-devkitc-enclosure && python esp32_s3_enclosure_exploded.py
 
 ### 十、运动仿真（Simulation）
 
-#### 25-fk-leg-chain — FK 正运动学（DH 齐次变换 + OCP 可视化）
+#### fk-leg-chain — FK 正运动学（DH 齐次变换 + OCP 可视化，待开发）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -441,7 +472,7 @@ cd tests/22-esp32-s3-devkitc-enclosure && python esp32_s3_enclosure_exploded.py
 
 **涉及 API**：`Sphere`, `Box`, `Pos`, `Rot`, `Location`, `show`, `export_step`, numpy `dh_matrix`
 
-#### 26-ik-single-leg — IK 逆运动学（解析求解 + 双构型对比）
+#### ik-single-leg — IK 逆运动学（解析求解 + 双构型对比，待开发）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -452,7 +483,7 @@ cd tests/22-esp32-s3-devkitc-enclosure && python esp32_s3_enclosure_exploded.py
 
 **涉及 API**：`Sphere`, `Box`, `Pos`, `show`, `export_step`, 纯 Python `ik_leg`
 
-#### 27-workspace-cloud — 工作空间点云（FK 遍历 + 可达性可视化）
+#### workspace-cloud — 工作空间点云（FK 遍历 + 可达性可视化，待开发）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -462,7 +493,7 @@ cd tests/22-esp32-s3-devkitc-enclosure && python esp32_s3_enclosure_exploded.py
 
 **涉及 API**：`Vertex`, `Sphere`, `Pos`, `show`, numpy FK 遍历
 
-#### 28-gait-generator — 步态生成器（贝塞尔轨迹 + IK + OCP 动画）
+#### gait-generator — 步态生成器（贝塞尔轨迹 + IK + OCP 动画，待开发）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -473,7 +504,7 @@ cd tests/22-esp32-s3-devkitc-enclosure && python esp32_s3_enclosure_exploded.py
 
 **涉及 API**：`Box`, `Cylinder`, `Pos`, `Compound`, `Animation`, `add_track`, `animate`, `show`
 
-#### 29-urdf-export — URDF 导出（build123d → URDF + STL）
+#### urdf-export — URDF 导出（build123d → URDF + STL，待开发）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -489,7 +520,7 @@ cd tests/22-esp32-s3-devkitc-enclosure && python esp32_s3_enclosure_exploded.py
 
 ### 十一、验证工具（Verification）
 
-#### 23-validate-geometry — 几何验证
+#### validate-geometry — 几何验证（待开发）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -500,7 +531,7 @@ cd tests/22-esp32-s3-devkitc-enclosure && python esp32_s3_enclosure_exploded.py
 
 **涉及 API**：`is_valid`, `volume`, `bounding_box`, `Compound`, `do_children_intersect`
 
-#### 24-export-formats — 多格式导出
+#### export-formats — 多格式导出（待开发）
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -513,6 +544,26 @@ cd tests/22-esp32-s3-devkitc-enclosure && python esp32_s3_enclosure_exploded.py
 
 ---
 
+### 十二、传动与动画（Transmission & Animation）
+
+#### 24-planetary-gear — 行星齿轮组（渐开线齿轮 + URDF/GLB 动画）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 渐开线外齿轮封装 | :white_check_mark: | 复用 02-spur-gear 思路，封装 `make_spur_gear()` |
+| 内齿圈生成 | :white_check_mark: | 环坯减外齿刀生成内齿，满足 `z_r = z_s + 2*z_p` |
+| 行星架建模 | :white_check_mark: | 薄盘 + 3 个行星销孔 + 中心让位孔 |
+| 啮合约束校验 | :white_check_mark: | 中心距、齿数、行星等分约束 assert 检查 |
+| parts-lib 标件集成 | :white_check_mark: | 弹性销、M3 内六角螺钉、SG90 舵机驱动实体 |
+| STEP + GLB sidecar 导出 | :white_check_mark: | `planetary_gear.step` + `.planetary_gear.step.glb` 供 viewer 直接渲染 |
+| 可动画 URDF | :white_check_mark: | `joints.yaml` 生成 continuous + mimic 关节，viewer 中拖 `j_sun` 或 play 驱动 |
+| 木纹/PBR GLB 动画 | :white_check_mark: | `animated_material.py` 生成带贴图和节点动画的 `planetary_animated.glb` |
+| Headless 验证脚本 | :white_check_mark: | `verify_headless.py` / `verify_anim.py` / `verify_console.py` 检查预览链路 |
+
+**涉及 API**：`Cylinder`, `Wire.make_polygon`, `BuildPart`, `BuildSketch`, `extrude`, `scale`, `PolarLocations`, `Compound`, `Part`, `Location`, `export_step`, `export_gltf`, `export_stl`, `yaml.safe_dump`, `pygltflib`
+
+---
+
 ## 覆盖统计
 
 | 类别 | 已完成 | 待开发 | 总计 |
@@ -520,14 +571,15 @@ cd tests/22-esp32-s3-devkitc-enclosure && python esp32_s3_enclosure_exploded.py
 | 零件建模 | 7 | 0 | 7 |
 | 曲面建模 | 3 | 0 | 3 |
 | 关节装配 | 3 | 0 | 3 |
-| 参考物建模 | 3 | 0 | 3 |
+| 参考物建模 | 2 | 0 | 2 |
 | Playbook/Skill 验证 | 5 | 0 | 5 |
-| 安装实战 | 2 | 2 | 4 |
+| 安装实战 / 机器人装配 | 3 | 2 | 5 |
+| 传动与动画 | 1 | 0 | 1 |
 | OCP 可视化 | 0 | 4 | 4 |
 | 制造工艺 | 0 | 2 | 2 |
 | 运动仿真 | 0 | 5 | 5 |
 | 验证工具 | 0 | 2 | 2 |
-| **合计** | **23** | **15** | **38** |
+| **合计** | **24** | **15** | **39** |
 
 ---
 
@@ -574,22 +626,30 @@ build123d-cad-skill-test/
 │   │   ├── esp32_s3_enclosure_exploded.py  # 爆炸动画 + GIF
 │   │   ├── contract.yaml                # Layer 0 参数合同
 │   │   └── output/                      # STEP × 3 + exploded_explode.gif
-│   ├── （待开发）pcb-enclosure/  # ⬜ PCB 壳体（带螺孔版）
-│   ├── （待开发）pcb-enclosure/  # ⬜ PCB 壳体
-│   ├── （待开发）sensor-bracket/ # ⬜ 传感器支架
-│   ├── （待开发）show-params/    # ⬜ show() 参数
-│   ├── （待开发）animation-explode/ # ⬜ 爆炸动画
-│   ├── （待开发）animation-joint/   # ⬜ 关节动画
-│   ├── （待开发）studio-material/   # ⬜ PBR 材质
-│   ├── （待开发）print-tolerance/   # ⬜ 打印公差
-│   ├── （待开发）laser-dxf/         # ⬜ 激光 DXF
-│   ├── （待开发）validate-geometry/ # ⬜ 几何验证
-│   ├── （待开发）export-formats/    # ⬜ 多格式导出
-│   ├── （待开发）fk-leg-chain/      # ⬜ FK 正运动学
-│   ├── （待开发）ik-single-leg/     # ⬜ IK 逆运动学
-│   ├── （待开发）workspace-cloud/   # ⬜ 工作空间点云
-│   ├── （待开发）gait-generator/    # ⬜ 步态生成器
-│   └── （待开发）urdf-export/       # ⬜ URDF 导出
+│   ├── 23-quadruped-leg-2dof/     # ✅ 四足 2-DOF 单腿装配（parts-lib 优先）
+│   │   ├── quadruped_leg.py
+│   │   └── output/                # 单件 STEP + leg_assembly.step
+│   ├── 24-planetary-gear/         # ✅ 行星齿轮组（STEP / URDF / GLB 动画）
+│   │   ├── planetary_test.py
+│   │   ├── planetary_anim_test.py
+│   │   ├── animated_material.py
+│   │   ├── planetary_lib.py
+│   │   └── output/                # STEP / GLB / joints.yaml / URDF 产物
+│   ├── （待开发）pcb-enclosure/      # ⬜ PCB 壳体（带螺孔版）
+│   ├── （待开发）sensor-bracket/     # ⬜ 传感器支架
+│   ├── （待开发）show-params/        # ⬜ show() 参数
+│   ├── （待开发）animation-explode/  # ⬜ 爆炸动画
+│   ├── （待开发）animation-joint/    # ⬜ 关节动画
+│   ├── （待开发）studio-material/    # ⬜ PBR 材质
+│   ├── （待开发）print-tolerance/    # ⬜ 打印公差
+│   ├── （待开发）laser-dxf/          # ⬜ 激光 DXF
+│   ├── （待开发）validate-geometry/  # ⬜ 几何验证
+│   ├── （待开发）export-formats/     # ⬜ 多格式导出
+│   ├── （待开发）fk-leg-chain/       # ⬜ FK 正运动学
+│   ├── （待开发）ik-single-leg/      # ⬜ IK 逆运动学
+│   ├── （待开发）workspace-cloud/    # ⬜ 工作空间点云
+│   ├── （待开发）gait-generator/     # ⬜ 步态生成器
+│   └── （待开发）urdf-export/        # ⬜ URDF 导出
 ├── docs/                           # 设计方案与实施计划
 ├── references/                     # skill 参考资料的本地快照/快测
 └── generated/                      # 工具脚本临时产物
